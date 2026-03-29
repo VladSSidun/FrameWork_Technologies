@@ -1,6 +1,6 @@
-const js = require('@eslint/js');
+import js from '@eslint/js';
 
-module.exports = [
+export default [
   {
     ignores: ['node_modules/**', 'eslint.config.js'],
   },
@@ -8,11 +8,6 @@ module.exports = [
   {
     languageOptions: {
       globals: {
-        require: 'readonly',
-        module: 'readonly',
-        exports: 'readonly',
-        __dirname: 'readonly',
-        __filename: 'readonly',
         process: 'readonly',
         console: 'readonly',
         setTimeout: 'readonly',

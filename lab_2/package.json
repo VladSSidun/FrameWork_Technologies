@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "description": "Node.js HTTP server with process management",
   "main": "server.js",
+  "type": "module",
   "imports": {
-    "#config/*": "./config/*.js",
-    "#utils/*": "./utils/*.js",
-    "#controllers/*": "./controllers/*.js",
-    "#routes/*": "./routes/*.js",
-    "#validators/*": "./validators/*.js"
+    "#config/*": "./config/*",
+    "#utils/*": "./utils/*",
+    "#controllers/*": "./controllers/*",
+    "#routes/*": "./routes/*",
+    "#validators/*": "./validators/*"
   },
   "engines": {
     "node": ">=20.0.0",

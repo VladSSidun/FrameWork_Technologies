@@ -1,4 +1,4 @@
-const { logRequest } = require('../utils/logger');
+import { logRequest } from '#utils/logger.js';
 
 const startTime = Date.now();
 
@@ -20,4 +20,4 @@ const getHealth = (req, res) => {
   logRequest(req.method, req.url, 200);
 };
 
-module.exports = { getHealth };
+export { getHealth };

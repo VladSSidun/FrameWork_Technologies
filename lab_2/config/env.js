@@ -1,9 +1,8 @@
-const fs = require('fs');
-const path = require('path');
-const { validate } = require('../validators/env.schema');
+import { validate } from '#validators/env.schema.js';
+import fs from 'fs';
+import path from 'path';
 
-// Читаємо .env вручну без dotenv
-const envPath = path.resolve(__dirname, '../.env');
+const envPath = path.resolve(import.meta.dirname, '../.env');
 
 if (fs.existsSync(envPath)) {
   const lines = fs.readFileSync(envPath, 'utf-8').split('\n');
@@ -20,7 +19,6 @@ if (fs.existsSync(envPath)) {
   }
 }
 
-// AJV валідація
 const valid = validate(process.env);
 if (!valid) {
   console.error('Помилки конфігурації:');
@@ -30,8 +28,8 @@ if (!valid) {
   process.exit(1);
 }
 
-module.exports = {
+export default {
   PORT: parseInt(process.env.PORT, 10),
-  HOSTNAME: process.env.HOST, // ← читаємо HOST але експортуємо як HOSTNAME
+  HOSTNAME: process.env.HOST,
   NODE_ENV: process.env.NODE_ENV,
 };

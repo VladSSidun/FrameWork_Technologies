@@ -1,6 +1,6 @@
-const { server } = require('./app');
-const config = require('#config/env');
-const { log } = require('#utils/logger');
+import config from '#config/env.js';
+import { log } from '#utils/logger.js';
+import { server } from './app.js';
 
 server.listen(config.PORT, config.HOSTNAME, () => {
   log('INFO', {

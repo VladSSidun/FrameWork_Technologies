@@ -1,17 +1,16 @@
-const { getHealth } = require('#controllers/health.controller');
+import { getHealth } from '#controllers/health.controller.js';
+import { logRequest } from '#utils/logger.js';
 
-function router(req, res, config) {
+function router(req, res) {
   const { method, url } = req;
 
   if (method === 'GET' && url === '/health') {
-    return getHealth(req, res, config);
+    return getHealth(req, res);
   }
 
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not Found' }));
-
-  const { logRequest } = require('#utils/logger');
   logRequest(method, url, 404);
 }
 
-module.exports = { router };
+export { router };

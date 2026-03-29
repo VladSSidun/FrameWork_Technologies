@@ -1,7 +1,7 @@
-const http = require('http');
-const config = require('#config/env');
-const { log } = require('#utils/logger');
-const { router } = require('#routes/index');
+import config from '#config/env.js';
+import { router } from '#routes/index.js';
+import { log } from '#utils/logger.js';
+import http from 'http';
 
 const server = http.createServer((req, res) => {
   req.on('data', () => {});
@@ -9,7 +9,7 @@ const server = http.createServer((req, res) => {
     if (config.NODE_ENV === 'development') {
       log('INFO', { method: req.method, url: req.url });
     }
-    router(req, res, config);
+    router(req, res);
   });
 });
 
@@ -56,4 +56,4 @@ process.on('unhandledRejection', (reason) => {
   gracefulShutdown('unhandledRejection');
 });
 
-module.exports = { server };
+export { server };

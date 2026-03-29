@@ -1,4 +1,3 @@
-// Варіант 1 — кожен лог є валідним JSON рядком
 function log(level, fields) {
   const entry = {
     timestamp: new Date().toISOString(),
@@ -19,4 +18,4 @@ function logRequest(method, url, status) {
   log(level, { method, url, status });
 }
 
-module.exports = { log, logRequest };
+export { log, logRequest };
