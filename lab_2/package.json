@@ -1,0 +1,39 @@
+{
+  "name": "lab_2",
+  "version": "1.0.0",
+  "description": "Node.js HTTP server with process management",
+  "main": "server.js",
+  "imports": {
+    "#config/*": "./config/*.js",
+    "#utils/*": "./utils/*.js",
+    "#controllers/*": "./controllers/*.js",
+    "#routes/*": "./routes/*.js",
+    "#validators/*": "./validators/*.js"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "dev": "node --watch --env-file=.env server.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run lint && npm run format:check",
+    "predev": "npm run check"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ajv": "^8.18.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.1.0",
+    "prettier": "^3.8.1"
+  }
+}
