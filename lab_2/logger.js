@@ -5,8 +5,8 @@
 
 /*
  * Основна функція логування.
- * @param {string} level  - рівень: 'INFO', 'WARN', 'ERROR'
- * @param {object} fields - довільні поля для включення в лог
+ *  level  - рівень: 'INFO', 'WARN', 'ERROR'
+ *  fields - довільні поля для включення в лог
  */
 function log(level, fields) {
   const entry = {
@@ -14,6 +14,7 @@ function log(level, fields) {
     level,
     ...fields, // розпаковуємо всі передані поля
   };
+
   // JSON.stringify перетворює об'єкт на рядок
   // Помилки (ERROR) пишемо в stderr, інше — в stdout
   if (level === "ERROR") {
