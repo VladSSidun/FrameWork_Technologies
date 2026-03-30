@@ -1,61 +1,25 @@
-const { validateQuery, validateBody } = require('../validators/request.schema');
 const { logRequest } = require('../utils/logger');
 
-// GET /user?id=1
-const getUser = (req, res) => {
-  // Витягуємо query параметри з URL
-  const url = new URL(req.url, `http://${req.headers.host}`);
-  const query = Object.fromEntries(url.searchParams);
-  // query = { id: '1' }
+// Зберігаємо момент старту для підрахунку uptime
+const startTime = Date.now();
 
-  // Валідуємо через AJV
-  const valid = validateQuery(query);
-  if (!valid) {
-    // Якщо невалідно — повертаємо 400
-    const error = validateQuery.errors[0].message;
-    res.writeHead(400, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: `query: ${error}` }));
-    logRequest(req.method, req.url, 400);
-    return;
-  }
-
+const getHealth = (req, res) => {
+  // process.memoryUsage() — повертає об'єкт з використанням пам'яті в байтах
+  const memUsage = process.memoryUsage();
+  const responseBody = {
+    pid: process.pid,
+    nodeVersion: process.version,
+    platform: process.platform,
+    uptime: Math.floor((Date.now() - startTime) / 1000),
+    memoryUsage: {
+      rss: `${Math.round(memUsage.rss / 1024 / 1024)} MB`,
+      heapUsed: `${Math.round(memUsage.heapUsed / 1024 / 1024)} MB`,
+      heapTotal: `${Math.round(memUsage.heapTotal / 1024 / 1024)} MB`,
+    },
+  };
   res.writeHead(200, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ userId: query.id, name: 'Vlad' }));
+  res.end(JSON.stringify(responseBody));
   logRequest(req.method, req.url, 200);
 };
 
-// POST /user з body { name, age }
-const createUser = (req, res) => {
-  let raw = '';
-  req.on('data', (chunk) => {
-    raw += chunk;
-  });
-  req.on('end', () => {
-    // Парсимо JSON з тіла запиту
-    let body;
-    try {
-      body = JSON.parse(raw);
-    } catch {
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Invalid JSON' }));
-      logRequest(req.method, req.url, 400);
-      return;
-    }
-
-    // Валідуємо через AJV
-    const valid = validateBody(body);
-    if (!valid) {
-      const error = validateBody.errors[0].message;
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: `body: ${error}` }));
-      logRequest(req.method, req.url, 400);
-      return;
-    }
-
-    res.writeHead(201, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ message: 'User created', user: body }));
-    logRequest(req.method, req.url, 201);
-  });
-};
-
-module.exports = { getUser, createUser };
+module.exports = { getHealth };

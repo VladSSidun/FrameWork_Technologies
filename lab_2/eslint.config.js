@@ -16,6 +16,7 @@ module.exports = [
         process: 'readonly',
         console: 'readonly',
         setTimeout: 'readonly',
+        URL: 'readonly', // ← додай це
       },
     },
     rules: {

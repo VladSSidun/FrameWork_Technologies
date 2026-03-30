@@ -4,15 +4,15 @@ const { log } = require('#utils/logger');
 const { router } = require('#routes/index');
 
 const server = http.createServer((req, res) => {
-  req.on('data', () => {});
-  req.on('end', () => {
-    if (config.NODE_ENV === 'development') {
-      log('INFO', { method: req.method, url: req.url });
-    }
-    router(req, res, config);
-  });
+  // Логуємо кожен вхідний запит в development режимі
+  if (config.NODE_ENV === 'development') {
+    log('INFO', { method: req.method, url: req.url });
+  }
+  // Передаємо запит в роутер
+  router(req, res);
 });
 
+// Graceful Shutdown — коректне завершення при отриманні сигналу
 function gracefulShutdown(signal) {
   log('INFO', {
     message: `Отримано сигнал ${signal}. Починаємо завершення...`,
