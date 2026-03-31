@@ -1,23 +1,20 @@
 import js from '@eslint/js';
+import globals from 'globals';
 
 export default [
-  {
-    ignores: ['node_modules/**', 'eslint.config.js'],
-  },
   js.configs.recommended,
   {
     languageOptions: {
-      globals: {
-        process: 'readonly',
-        console: 'readonly',
-        setTimeout: 'readonly',
-      },
+      globals: globals.node,
+      ecmaVersion: 'latest',
+      sourceType: 'module',
     },
     rules: {
+      // Забороняємо process.env в коді — тільки через fastify.config
+      // Порушення = помилка лінтера (error), а не попередження
+      'no-process-env': 'error',
       'no-unused-vars': 'warn',
-      'no-console': 'off',
-      semi: ['error', 'always'],
-      quotes: ['error', 'single'],
+      'no-console': 'warn',
     },
   },
 ];
