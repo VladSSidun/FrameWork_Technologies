@@ -1,46 +1,37 @@
-// Controller для продуктів.
-// Отримує дані з request, передає до service, формує reply.
-// НЕ містить бізнес-логіки — тільки "прийняв → делегував → відповів".
-
 import { MESSAGES } from '#constants/messages.js';
 import * as productsService from '#services/products.service.js';
+import { buildImageUrl } from '#utils/image-url.js';
 
-// GET /api/products
+// Формує продукт з повним URL зображення
+const withImageUrl = (request, product) => {
+  if (!product) return null;
+  return { ...product, image: buildImageUrl(request, product.image) };
+};
+
 export const getAll = async (request, reply) => {
-  const products = productsService.findAll();
-  return reply.send(products);
+  const products = await productsService.findAll();
+  return reply.send(products.map((p) => withImageUrl(request, p)));
 };
 
-// GET /api/products/:id
 export const getById = async (request, reply) => {
-  const product = productsService.findById(request.params.id);
-
-  // @fastify/sensible надає reply.notFound() — кидає 404 з JSON відповіддю
+  const product = await productsService.findById(request.params.id);
   if (!product) throw reply.notFound(MESSAGES.PRODUCT_NOT_FOUND);
-
-  return reply.send(product);
+  return reply.send(withImageUrl(request, product));
 };
 
-// POST /api/products
 export const create = async (request, reply) => {
-  const product = productsService.create(request.body);
-  return reply.status(201).send(product); // 201 Created
+  const product = await productsService.create(request.body);
+  return reply.status(201).send(withImageUrl(request, product));
 };
 
-// PATCH /api/products/:id
 export const update = async (request, reply) => {
-  const product = productsService.update(request.params.id, request.body);
-
+  const product = await productsService.update(request.params.id, request.body);
   if (!product) throw reply.notFound(MESSAGES.PRODUCT_NOT_FOUND);
-
-  return reply.send(product);
+  return reply.send(withImageUrl(request, product));
 };
 
-// DELETE /api/products/:id
 export const remove = async (request, reply) => {
-  const success = productsService.remove(request.params.id);
-
+  const success = await productsService.remove(request.params.id);
   if (!success) throw reply.notFound(MESSAGES.PRODUCT_NOT_FOUND);
-
-  return reply.status(204).send(); // 204 No Content — успішно видалено, тіло порожнє
+  return reply.status(204).send();
 };

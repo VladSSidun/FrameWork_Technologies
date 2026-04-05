@@ -6,8 +6,10 @@
     "node": ">=20"
   },
   "scripts": {
+    "migrate": "node --env-file=.env src/migrations/migrate.js",
     "start": "node --env-file=.env server.js",
     "dev": "node --watch --env-file=.env server.js",
+    "seed": "node --env-file=.env src/scripts/seed.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -21,13 +23,20 @@
     "#services/*": "./services/*",
     "#repositories/*": "./repositories/*",
     "#constants/*": "./constants/*",
-    "#utils/*": "./utils/*"
+    "#utils/*": "./utils/*",
+    "#models/*": "./src/models/*",
+    "#scripts/*": "./src/scripts/*",
+    "#migrations/*": "./src/migrations/*"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.0",
     "@fastify/env": "^5.0.0",
     "@fastify/helmet": "^13.0.0",
+    "@fastify/multipart": "^9.4.0",
     "@fastify/sensible": "^6.0.0",
+    "@fastify/static": "^9.0.0",
+    "csv-parse": "^6.2.1",
+    "csv-stringify": "^6.7.0",
     "fastify": "^5.0.0",
     "fastify-plugin": "^5.0.0"
   },

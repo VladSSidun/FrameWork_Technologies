@@ -1,0 +1,58 @@
+// ─── Health ───────────────────────────────────────────
+// GET    http://localhost:3000/health
+// GET    http://localhost:3000/health/details                        (без ключа → 401)
+// GET    http://localhost:3000/health/details  [x-api-key: supersecret123]  (→ 200)
+
+// ─── Products ─────────────────────────────────────────
+// GET    http://localhost:3000/api/products
+// GET    http://localhost:3000/api/products/1
+// GET    http://localhost:3000/api/products/999                      (→ 404)
+// POST   http://localhost:3000/api/products    { name, price, qty, category }
+// POST   http://localhost:3000/api/products    { price: 50 }         (→ 400 валідація)
+// PATCH  http://localhost:3000/api/products/1  { price: 999.99 }
+// DELETE http://localhost:3000/api/products/3                        (→ 204)
+
+// ─── Orders ───────────────────────────────────────────
+// GET    http://localhost:3000/api/orders
+// GET    http://localhost:3000/api/orders/1
+// GET    http://localhost:3000/api/orders/999                        (→ 404)
+// POST   http://localhost:3000/api/orders      { productId: 1, qty: 2 }
+// PATCH  http://localhost:3000/api/orders/1    { status: "processing" }
+// DELETE http://localhost:3000/api/orders/1                          (→ 204)
+
+
+
+
+
+
+
+=================================================================================================
+=================================================================================================
+=================================================================================================
+=================================================================================================
+=================================================================================================
+=================================================================================================
+
+
+
+# ─── Health ───────────────────────────────────────────
+curl http://localhost:3000/health
+curl http://localhost:3000/health/details
+curl -H "x-api-key: supersecret123" http://localhost:3000/health/details
+
+# ─── Products ─────────────────────────────────────────
+curl http://localhost:3000/api/products
+curl http://localhost:3000/api/products/1
+curl http://localhost:3000/api/products/999
+curl -X POST http://localhost:3000/api/products -H "Content-Type: application/json" -d "{\"name\":\"Keyboard\",\"price\":79.99,\"qty\":20,\"category\":\"accessories\"}"
+curl -X POST http://localhost:3000/api/products -H "Content-Type: application/json" -d "{\"price\":50}"
+curl -X PATCH http://localhost:3000/api/products/1 -H "Content-Type: application/json" -d "{\"price\":999.99}"
+curl -X DELETE http://localhost:3000/api/products/3
+
+# ─── Orders ───────────────────────────────────────────
+curl http://localhost:3000/api/orders
+curl http://localhost:3000/api/orders/1
+curl http://localhost:3000/api/orders/999
+curl -X POST http://localhost:3000/api/orders -H "Content-Type: application/json" -d "{\"productId\":1,\"qty\":2}"
+curl -X PATCH http://localhost:3000/api/orders/1 -H "Content-Type: application/json" -d "{\"status\":\"processing\"}"
+curl -X DELETE http://localhost:3000/api/orders/1

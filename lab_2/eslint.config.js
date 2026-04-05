@@ -10,11 +10,16 @@ export default [
       sourceType: 'module',
     },
     rules: {
-      // Забороняємо process.env в коді — тільки через fastify.config
-      // Порушення = помилка лінтера (error), а не попередження
       'no-process-env': 'error',
       'no-unused-vars': 'warn',
       'no-console': 'warn',
+    },
+  },
+  {
+    // CLI скрипти і утиліти — console дозволений
+    files: ['src/**/*.js', 'utils/fs.utils.js'],
+    rules: {
+      'no-console': 'off',
     },
   },
 ];

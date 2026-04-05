@@ -7,11 +7,11 @@ import { buildApp } from './app.js';
 // Graceful Shutdown — коректне завершення роботи сервера.
 // Даємо серверу час завершити поточні запити перед зупинкою.
 const gracefulShutdown = async (fastify, signal) => {
-  fastify.log.info(`Отримано сигнал: ${signal}. Зупиняємо сервер...`);
+  fastify.log.info(`Sinal recieved: ${signal}. Stoping server...`);
 
   // Якщо за 10 секунд сервер не зупинився — примусово виходимо
   const timeout = setTimeout(() => {
-    fastify.log.error('Timeout graceful shutdown — примусовий вихід');
+    fastify.log.error('Timeout graceful shutdown — exit');
     process.exit(1);
   }, 10_000).unref(); // .unref() — не блокує Node.js event loop
 
@@ -22,7 +22,7 @@ const gracefulShutdown = async (fastify, signal) => {
     clearTimeout(timeout);
     process.exit(0);
   } catch (err) {
-    fastify.log.error(err, 'Помилка при зупинці сервера');
+    fastify.log.error(err, 'Error while stopping server');
     process.exit(1);
   }
 };
@@ -34,7 +34,7 @@ const start = async () => {
   // Реєструємо хук onClose — виконується при fastify.close()
   // Зручне місце для закриття БД, черг повідомлень тощо
   fastify.addHook('onClose', async () => {
-    fastify.log.info('Сервер закрито, всі ресурси звільнено');
+    fastify.log.info('Server is closed, resources is freed');
   });
 
   // Обробка сигналів операційної системи
@@ -48,15 +48,12 @@ const start = async () => {
   // uncaughtException — синхронні помилки ЗА МЕЖАМИ запитів (таймери, ініціалізація)
   // unhandledRejection — відхилені Promise ЗА МЕЖАМИ запитів
   process.on('uncaughtException', (err) => {
-    fastify.log.fatal(err, 'Необроблений виняток (uncaughtException)');
+    fastify.log.fatal(err, 'Error: (uncaughtException)');
     process.exit(1);
   });
 
   process.on('unhandledRejection', (reason) => {
-    fastify.log.fatal(
-      { reason },
-      'Необроблений rejection (unhandledRejection)'
-    );
+    fastify.log.fatal({ reason }, 'Error: rejection (unhandledRejection)');
     process.exit(1);
   });
 
@@ -68,3 +65,9 @@ const start = async () => {
 };
 
 start();
+// setTimeout(() => {
+//   throw new Error('Тестова синхронна помилка поза межами запиту');
+// }, 3000);
+// setTimeout(() => {
+//   Promise.reject(new Error('Тестовий rejected Promise без .catch()'));
+// }, 3000);

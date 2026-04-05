@@ -1,10 +1,8 @@
-// JSON Schema для продуктів — використовується в маршрутах Fastify.
-// Fastify автоматично валідує вхідні дані і серіалізує вихідні.
-// Поля відсутні в response schema НЕ потраплять у відповідь (захист від витоку даних).
+// JSON Schema для продуктів
+// Додані поля: category, image
 
-// Схема одного продукту — для повторного використання через $ref
 export const productSchema = {
-  $id: 'Product', // унікальний ідентифікатор — на нього будемо посилатись через $ref: 'Product#'
+  $id: 'Product',
   type: 'object',
   properties: {
     id: { type: 'integer' },
@@ -12,24 +10,23 @@ export const productSchema = {
     price: { type: 'number' },
     qty: { type: 'integer' },
     category: { type: 'string' },
+    image: {}, // приймає будь-яке значення — рядок або null
   },
 };
 
-// Схема для body при створенні продукту (POST /api/products)
 export const createProductBody = {
   type: 'object',
-  required: ['name', 'price', 'qty'], // обовʼязкові поля
+  required: ['name', 'price', 'qty'],
   properties: {
     name: { type: 'string', minLength: 1 },
-    price: { type: 'number', minimum: 0 }, // ціна не може бути від'ємною
-    qty: { type: 'integer', minimum: 0 }, // кількість не може бути від'ємною
+    price: { type: 'number', minimum: 0 },
+    qty: { type: 'integer', minimum: 0 },
     category: { type: 'string' },
+    image: { nullable: true, type: 'string' },
   },
-  additionalProperties: false, // зайві поля — 400 Bad Request
+  additionalProperties: false,
 };
 
-// Схема для body при оновленні продукту (PATCH /api/products/:id)
-// required відсутній — можна передати лише ті поля які хочемо змінити
 export const updateProductBody = {
   type: 'object',
   properties: {
@@ -37,14 +34,14 @@ export const updateProductBody = {
     price: { type: 'number', minimum: 0 },
     qty: { type: 'integer', minimum: 0 },
     category: { type: 'string' },
+    image: { nullable: true, type: 'string' },
   },
   additionalProperties: false,
 };
 
-// Схема params для маршрутів з :id
 export const idParam = {
   type: 'object',
   properties: {
-    id: { type: 'integer' }, // Fastify автоматично конвертує рядок "1" → число 1
+    id: { type: 'integer' },
   },
 };

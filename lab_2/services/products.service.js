@@ -2,13 +2,19 @@
 // Repository не знає про правила бізнесу — це завдання service.
 // Controller не знає як рахувати ціни — це завдання service.
 
+// Service — бізнес-логіка.
+// Repository не знає про правила бізнесу — це завдання service.
+// Controller не знає як рахувати ціни — це завдання service.
 import * as productsRepository from '#repositories/products.repository.js';
 
-// Отримати всі продукти (тут можна додати фільтрацію, сортування тощо)
+// Отримати всі продукти
 export const findAll = () => productsRepository.findAll();
 
 // Отримати продукт за id — повертає null якщо не знайдено
-export const findById = (id) => productsRepository.findById(id) ?? null;
+export const findById = async (id) => {
+  const product = await productsRepository.findById(id);
+  return product ?? null;
+};
 
 // Створити новий продукт
 export const create = (data) => productsRepository.create(data);

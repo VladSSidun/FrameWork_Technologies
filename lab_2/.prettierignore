@@ -1,0 +1,6 @@
+echo "data/
+uploads/
+node_modules/
+test-import.csv
+test.jpg
+downloaded.jpg" > .prettierignore

@@ -1,0 +1,4 @@
+name,price,qty,category
+Monitor,299.99,15,electronics
+Headphones,79.99,25,accessories
+BadItem,,abc,electronics
