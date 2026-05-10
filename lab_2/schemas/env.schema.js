@@ -5,21 +5,14 @@ export const envSchema = {
   type: 'object',
   required: ['PORT', 'HOST', 'NODE_ENV', 'ADMIN_API_KEY'],
   properties: {
-    PORT: {
-      type: 'integer', // @fastify/env автоматично конвертує рядок "3000" → число 3000
-      default: 3000,
-    },
-    HOST: {
-      type: 'string',
-      default: 'localhost',
-    },
+    PORT: { type: 'integer', default: 3000 },
+    HOST: { type: 'string', default: 'localhost' },
     NODE_ENV: {
       type: 'string',
-      enum: ['development', 'production', 'test'], // тільки ці значення дозволені
+      enum: ['development', 'production', 'test'],
     },
-    ADMIN_API_KEY: {
-      type: 'string',
-      minLength: 8, // ключ має бути хоча б 8 символів
-    },
+    ADMIN_API_KEY: { type: 'string', minLength: 8 },
+    // Токен необов'язковий — без нього ліміт 60 req/год
+    GITHUB_TOKEN: { type: 'string', default: '' },
   },
 };

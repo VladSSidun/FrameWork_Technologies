@@ -3,36 +3,34 @@
 // НЕ запускає сервер — це робить server.js.
 // Такий розподіл дозволяє тестувати застосунок без реального HTTP сервера.
 
-import cors from '@fastify/cors';
-import fastifyEnv from '@fastify/env';
-import helmet from '@fastify/helmet';
-import sensible from '@fastify/sensible';
-import Fastify from 'fastify';
-
+// ── app.js ─────────────────────────────────────────────────
+import { isMigrationNeeded } from '#migrations/migrate.js';
+import githubRoutes from '#routes/github.route.js';
 import healthRoutes from '#routes/health.route.js';
 import ordersRoutes from '#routes/orders.route.js';
 import productsRoutes from '#routes/products.route.js';
+import productsRoutesV2 from '#routes/v2/products.route.js';
 import { envSchema } from '#schemas/env.schema.js';
-import { errorHandler } from '#utils/error-handler.js';
-
-import { isMigrationNeeded } from '#migrations/migrate.js';
 import { createBackup } from '#utils/backup.utils.js';
+import { errorHandler } from '#utils/error-handler.js';
+import cors from '@fastify/cors';
+import fastifyEnv from '@fastify/env';
+import helmet from '@fastify/helmet';
 import fastifyMultipart from '@fastify/multipart';
+import rateLimit from '@fastify/rate-limit';
+import sensible from '@fastify/sensible';
 import fastifyStatic from '@fastify/static';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
+import Fastify from 'fastify';
 import path from 'path';
 
 export const buildApp = async () => {
-  // Читаємо NODE_ENV до реєстрації @fastify/env
-  // бо pino потрібен при створенні екземпляру
-
   // eslint-disable-next-line no-process-env
   const isDev = process.env.NODE_ENV !== 'production';
 
-  // Створюємо екземпляр Fastify з вбудованим pino логером
   const fastify = Fastify({
     logger: {
-      // В development — красивий форматований вивід через pino-pretty
-      // В production — чистий JSON (для систем моніторингу: Datadog, ELK і т.д.)
       level: isDev ? 'info' : 'error',
       transport: isDev
         ? { target: 'pino-pretty', options: { colorize: true } }
@@ -40,54 +38,69 @@ export const buildApp = async () => {
     },
   });
 
-  // ─── ПОРЯДОК РЕЄСТРАЦІЇ МАЄ ЗНАЧЕННЯ ──────────────────────────────────────
-  // Кожен наступний плагін може використовувати тільки те,
-  // що зареєстроване до нього.
-
-  // 1. fastify/env — ПЕРШИМ, бо fastify.config потрібен всім іншим
-  // dotenv: true — автоматично завантажує .env файл
+  // 1. Конфігурація середовища
   await fastify.register(fastifyEnv, { schema: envSchema, dotenv: true });
 
-  // 2. fastify/helmet — захисні HTTP заголовки для всіх відповідей
-  // global: true — застосовується до всіх маршрутів
+  // 2. Безпека
   await fastify.register(helmet, { global: true });
-
-  // 3. fastify/cors — дозволяє запити з браузера з іншого домену
-  // В dev дозволяємо всі домени (*), в prod — тільки конкретний
   await fastify.register(cors, {
     origin: isDev ? '*' : 'https://example.com',
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
   });
 
-  // 4. fastify/sensible — додає reply.notFound(), reply.badRequest() тощо
-  // Має бути до маршрутів, щоб методи були доступні в handlers
-  await fastify.register(sensible);
-
-  // 5. @fastify/multipart — для завантаження файлів (імпорт, зображення)
-  await fastify.register(fastifyMultipart, {
-    //Використовується для завантаження файлів через HTTP
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  // 3. Rate limiting — до маршрутів, щоб застосувалось глобально
+  await fastify.register(rateLimit, {
+    max: 100, // максимум 100 запитів...
+    timeWindow: '1 minute', // ...за 1 хвилину з однієї IP
+    // при перевищенні Fastify автоматично повертає 429
   });
 
-  // @fastify/static — роздача зображень з папки uploads/
-  // Файл uploads/1/image.jpg буде доступний за GET /uploads/1/image.jpg
+  // 4. Swagger
+  await fastify.register(swagger, {
+    openapi: {
+      info: {
+        title: 'Inventory API',
+        description: "REST API для управління складом комп'ютерної техніки",
+        version: '1.0.0',
+      },
+      // описуємо обидві версії API
+      tags: [
+        { name: 'products', description: 'Управління продуктами' },
+        { name: 'orders', description: 'Управління замовленнями' },
+        { name: 'github', description: 'Аналітика GitHub репозиторіїв' },
+        { name: 'health', description: 'Стан сервера' },
+      ],
+    },
+  });
+
+  await fastify.register(swaggerUi, {
+    routePrefix: '/docs', // документація доступна за GET /docs
+    uiConfig: {
+      docExpansion: 'list', // розгортати секції списком
+    },
+  });
+
+  // 5. Утиліти
+  await fastify.register(sensible);
+  await fastify.register(fastifyMultipart, {
+    limits: { fileSize: 5 * 1024 * 1024 },
+  });
   await fastify.register(fastifyStatic, {
     root: path.join(process.cwd(), 'uploads'),
     prefix: '/uploads/',
   });
 
-  // 6. setErrorHandler — реєструємо ДО маршрутів щоб перехоплювати їхні помилки
   fastify.setErrorHandler(errorHandler);
 
-  // 7. Маршрути — ОСТАННІМИ, залежать від всіх попередніх плагінів
-  await fastify.register(healthRoutes); // /health, /health/details
-  await fastify.register(productsRoutes, { prefix: '/api' }); // /api/products
-  await fastify.register(ordersRoutes, { prefix: '/api' }); // /api/orders
+  // 6. Маршрути — v1 і v2 під окремими префіксами
+  await fastify.register(healthRoutes);
+  await fastify.register(productsRoutes, { prefix: '/api/v1' });
+  await fastify.register(ordersRoutes, { prefix: '/api/v1' });
+  await fastify.register(productsRoutesV2, { prefix: '/api/v2' });
+  await fastify.register(githubRoutes); // реєструє і v1 і v2 всередині
 
   await createBackup(fastify.log);
 
-  // Перевіряємо чи потрібна міграція при кожному запуску
-  // Якщо модель змінилась — попереджаємо але не зупиняємо сервер
   if (await isMigrationNeeded()) {
     fastify.log.warn(
       'Data schema changed. Run "npm run migrate" to update existing files.'

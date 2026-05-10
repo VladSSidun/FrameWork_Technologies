@@ -1,0 +1,7 @@
+{
+  "categories": [
+    { "id": 1, "name": "Electronics", "tax": 0.2 },
+    { "id": 2, "name": "Accessories", "tax": 0.15 },
+    { "id": 3, "name": "Peripherals", "tax": 0.18 }
+  ]
+}
