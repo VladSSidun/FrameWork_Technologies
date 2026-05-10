@@ -10,7 +10,8 @@ export const productSchema = {
     price: { type: 'number' },
     qty: { type: 'integer' },
     category: { type: 'string' },
-    image: {}, // приймає будь-яке значення — рядок або null
+    image: {}, //{ nullable: true, type: 'string' }, // приймає будь-яке значення — рядок або null
+    discount: { type: 'integer' },
   },
 };
 

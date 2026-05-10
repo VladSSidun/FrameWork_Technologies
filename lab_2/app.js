@@ -65,6 +65,7 @@ export const buildApp = async () => {
 
   // 5. @fastify/multipart — для завантаження файлів (імпорт, зображення)
   await fastify.register(fastifyMultipart, {
+    //Використовується для завантаження файлів через HTTP
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   });
 

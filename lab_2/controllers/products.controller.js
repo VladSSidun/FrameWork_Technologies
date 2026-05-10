@@ -4,6 +4,10 @@ import { buildImageUrl } from '#utils/image-url.js';
 
 // Формує продукт з повним URL зображення
 const withImageUrl = (request, product) => {
+  /*
+   приймає продукт і повертає його копію з повним URL для поля image. 
+   Викликається у всіх handlers які повертають продукт або список продуктів.
+  */
   if (!product) return null;
   return { ...product, image: buildImageUrl(request, product.image) };
 };

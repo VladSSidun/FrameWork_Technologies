@@ -89,7 +89,7 @@ const migrate = async () => {
     // спочатку дефолти, потім реальні дані поверх них
     // Так відсутні поля отримують дефолтне значення
     // а існуючі поля залишаються без змін
-    const migrated_item = { ...ItemModel, ...existing };
+    const migrated_item = { ...ItemModel, ...existing }; // Останній обєкт перезаписує попередній
 
     await writeAtomic(filePath, migrated_item);
     console.log(`Migrated: ${file}`);

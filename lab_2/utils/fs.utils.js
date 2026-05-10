@@ -26,7 +26,7 @@ export const writeAtomic = async (filePath, data) => {
     try {
       await fs.unlink(tmp);
     } catch (unlinkError) {
-      // ENOENT — файл не встиг створитись, це нормально
+      // ENOENT — файл не встиг створитись
       if (unlinkError.code !== 'ENOENT') {
         console.error('Failed to cleanup tmp file:', unlinkError);
       }

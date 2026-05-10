@@ -56,3 +56,67 @@ curl http://localhost:3000/api/orders/999
 curl -X POST http://localhost:3000/api/orders -H "Content-Type: application/json" -d "{\"productId\":1,\"qty\":2}"
 curl -X PATCH http://localhost:3000/api/orders/1 -H "Content-Type: application/json" -d "{\"status\":\"processing\"}"
 curl -X DELETE http://localhost:3000/api/orders/1
+
+
+
+
+
+
+
+
+
+=====================================================================================================
+=====================================================================================================
+=====================================================================================================
+
+
+npm start
+запуск сервера (graceful shutdown працює)
+
+npm run dev
+запуск з авторестартом при змінах
+
+npm run seed
+створити початкові файли в data/items/
+
+npm run migrate
+оновити всі файли при зміні моделі
+
+npm run check
+ESLint + Prettier перевірка
+
+
+==========================
+
+
+
+Базові CRUD
+
+curl http://localhost:3000/api/products
+curl http://localhost:3000/api/products/1
+curl -X POST http://localhost:3000/api/products -H "Content-Type: application/json" -d "{\"name\":\"Test\",\"price\":99,\"qty\":5,\"category\":\"test\"}"
+curl -X PATCH http://localhost:3000/api/products/1 -H "Content-Type: application/json" -d "{\"price\":999}"
+curl -X DELETE http://localhost:3000/api/products/3
+
+==========================
+
+
+Файловий функціонал
+
+curl http://localhost:3000/api/products/export    експорт наявного csv
+curl -X POST http://localhost:3000/api/products/import -F "file=@test-import.csv"  Імпортуємо csv файл 
+curl -X POST http://localhost:3000/api/products/1/image -F "file=@test.jpg"     Додати файл для елемента інвентароя
+curl http://localhost:3000/uploads/1/image.jpg --output downloaded.jpg
+
+
+
+
+
+
+
+
+
+
+
+
+

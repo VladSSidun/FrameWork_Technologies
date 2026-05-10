@@ -9,5 +9,6 @@ export const ItemModel = {
   price: 0,
   qty: 0,
   category: '', // Variant 1 — Inventory
-  image: null, // шлях до зображення, наприклад /1/image.jpg
+  image: null, // шлях до зображення, наприк /1/image.jpg
+  discount: 0,
 };

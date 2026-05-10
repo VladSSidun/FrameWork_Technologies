@@ -31,9 +31,12 @@ import path from 'path';
 export default async function productsRoutes(fastify) {
   fastify.addSchema(productSchema);
 
-  // ВАЖЛИВО: /products/export має бути ДО /products/:id
-  // інакше Fastify сприйме рядок 'export' як значення :id
   fastify.get('/products/export', async (request, reply) => {
+    /*
+    Читає всі продукти, формує повний URL для image через buildImageUrl(), 
+    генерує CSV через stringify() з пакету csv-stringify, 
+    встановлює Content-Disposition: attachment і відправляє.
+    */
     const products = await productsService.findAll();
 
     const rows = products.map((p) => ({
@@ -41,7 +44,7 @@ export default async function productsRoutes(fastify) {
       image: buildImageUrl(request, p.image),
     }));
 
-    const csv = stringify(rows, { header: true });
+    const csv = stringify(rows, { header: true }); // перетворюєм масив на CSV рядок.
 
     return reply
       .header('Content-Type', 'text/csv')
@@ -51,6 +54,14 @@ export default async function productsRoutes(fastify) {
 
   // POST /api/products/import — імпорт з CSV або JSON файлу
   fastify.post('/products/import', async (request, reply) => {
+    /*
+    приймає файл через request.file(), 
+    визначає формат за mimetype або розширенням,
+    парсить CSV через parse() або JSON через JSON.parse(), 
+    валідує кожен запис вручну, 
+    зберігає валідні через productsRepository.create(), 
+    повертає звіт { imported, rejected, details }
+    */
     const data = await request.file();
 
     if (!data) throw reply.badRequest('Файл не завантажено');
@@ -65,7 +76,7 @@ export default async function productsRoutes(fastify) {
       throw reply.badRequest('Підтримуються тільки CSV та JSON формати');
     }
 
-    const buffer = await data.toBuffer();
+    const buffer = await data.toBuffer(); // завантажуємо файл в пам'ять як Buffer
     let items;
 
     // Парсимо файл залежно від формату
@@ -181,6 +192,13 @@ export default async function productsRoutes(fastify) {
 
   // POST /api/products/:id/image — завантаження зображення
   fastify.post(
+    /*
+     перевіряє тип файлу (image/jpeg або image/png), 
+     розмір до 5MB, створює папку uploads/{id}/, 
+     зберігає через stream.pipe(writable) без завантаження в пам'ять, 
+     оновлює продукт відносним шляхом, 
+     повертає продукт з повним URL
+    */
     '/products/:id/image',
     {
       schema: {
