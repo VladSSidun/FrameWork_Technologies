@@ -1,2 +1,12 @@
 **/node_modules/
 **/.env
+
+# Тимчасові тестові файли
+test.jpg
+test-import.csv
+downloaded.jpg
+url.txt
+
+# Дані і завантаження (генеруються автоматично)
+data/
+uploads/
