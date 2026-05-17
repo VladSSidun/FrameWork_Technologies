@@ -1,5 +1,5 @@
 // Маршрути для продуктів.
-// Схеми тут описані inline — або можна імпортувати з schemas/.
+// Схеми тут описані inline - або можна імпортувати з schemas/.
 
 import {
   create,
@@ -18,7 +18,6 @@ import {
 
 import * as productsService from '#services/products.service.js';
 import { buildImageUrl } from '#utils/image-url.js';
-import { stringify } from 'csv-stringify/sync';
 
 import * as productsRepository from '#repositories/products.repository.js';
 import { parse } from 'csv-parse/sync';
@@ -31,31 +30,58 @@ import path from 'path';
 import { getFromCache, saveToCache } from '#utils/cache.utils.js';
 import { fetchWithRetry } from '#utils/fetch.utils.js';
 
+import { createPriceTransform } from '#transforms/price-uah.transform.js';
+import { stringify } from 'csv-stringify';
+import { Readable } from 'stream';
+import { pipeline } from 'stream/promises';
+
 export default async function productsRoutes(fastify) {
   fastify.addSchema(productSchema);
 
   fastify.get('/products/export', async (request, reply) => {
-    /*
-    Читає всі продукти, формує повний URL для image через buildImageUrl(), 
-    генерує CSV через stringify() з пакету csv-stringify, 
-    встановлює Content-Disposition: attachment і відправляє.
-    */
     const products = await productsService.findAll();
+    const useTransform = request.query.transform === 'true';
 
+    // ?transform=true — конвертуємо ціни в UAH через Transform stream
+    if (useTransform) {
+      const usdToUah = fastify.config.USD_TO_UAH;
+
+      const priceTransform = createPriceTransform(usdToUah);
+
+      // stringifier — Transform stream який перетворює об'єкти в CSV рядки
+      const stringifier = stringify({ header: true });
+
+      reply
+        .header('Content-Type', 'text/csv')
+        .header(
+          'Content-Disposition',
+          'attachment; filename="products-uah.csv"'
+        );
+
+      // pipeline: масив продуктів → конвертація цін → CSV рядки → HTTP відповідь
+      await pipeline(
+        Readable.from(products),
+        priceTransform,
+        stringifier,
+        reply.raw
+      );
+      return;
+    }
+
+    // без transform — як раніше
     const rows = products.map((p) => ({
       ...p,
       image: buildImageUrl(request, p.image),
     }));
-
-    const csv = stringify(rows, { header: true }); // перетворюєм масив на CSV рядок.
-
+    const { stringify: stringifySync } = await import('csv-stringify/sync');
+    const csv = stringifySync(rows, { header: true });
     return reply
       .header('Content-Type', 'text/csv')
       .header('Content-Disposition', 'attachment; filename="products.csv"')
       .send(csv);
   });
 
-  // POST /api/products/import — імпорт з CSV або JSON файлу
+  // POST /api/products/import - імпорт з CSV або JSON файлу
   fastify.post('/products/import', async (request, reply) => {
     /*
     приймає файл через request.file(), 
@@ -86,8 +112,8 @@ export default async function productsRoutes(fastify) {
     if (isJson) {
       items = JSON.parse(buffer.toString());
     } else {
-      // columns: true — перший рядок як назви полів
-      // skip_empty_lines: true — пропускаємо порожні рядки
+      // columns: true - перший рядок як назви полів
+      // skip_empty_lines: true - пропускаємо порожні рядки
       items = parse(buffer, { columns: true, skip_empty_lines: true });
     }
 
@@ -95,14 +121,14 @@ export default async function productsRoutes(fastify) {
       throw reply.badRequest('Файл має містити масив записів');
     }
 
-    // Обробляємо кожен запис — валідуємо і зберігаємо
+    // Обробляємо кожен запис - валідуємо і зберігаємо
     let imported = 0;
     const rejected = [];
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
 
-      // Проста валідація — перевіряємо обов'язкові поля
+      // Проста валідація - перевіряємо обов'язкові поля
       if (!item.name || item.name.toString().trim() === '') {
         rejected.push({ index: i + 1, reason: 'Відсутнє поле name' });
         continue;
@@ -187,15 +213,15 @@ export default async function productsRoutes(fastify) {
 
       // Крок 2: пробуємо отримати дані категорії з json-server
       try {
-        // Спочатку перевіряємо кеш — може дані вже є і свіжі
+        // Спочатку перевіряємо кеш - може дані вже є і свіжі
         const cached = await getFromCache();
 
         if (cached) {
-          // Кеш актуальний — беремо з нього, json-server не чіпаємо
+          // Кеш актуальний - беремо з нього, json-server не чіпаємо
           fastify.log.info('Category details served from cache');
           categoryDetails = cached;
         } else {
-          // Кеш застарів або відсутній — йдемо до json-server
+          // Кеш застарів або відсутній - йдемо до json-server
           // fetchWithRetry: до 3 спроб, timeout 5с, backoff 1с/2с/4с
           const response = await fetchWithRetry(
             'http://localhost:3001/categories/1',
@@ -212,7 +238,7 @@ export default async function productsRoutes(fastify) {
         }
       } catch (error) {
         // Graceful degradation: json-server недоступний після всіх спроб
-        // Не падаємо з 500 — повертаємо продукт з categoryDetails: null
+        // Не падаємо з 500 - повертаємо продукт з categoryDetails: null
         fastify.log.warn(
           { err: error.message },
           'json-server unavailable, returning partial response'
@@ -283,7 +309,7 @@ export default async function productsRoutes(fastify) {
     remove
   );
 
-  // POST /api/products/:id/image — завантаження зображення
+  // POST /api/products/:id/image - завантаження зображення
   fastify.post(
     /*
      перевіряє тип файлу (image/jpeg або image/png), 
@@ -308,7 +334,7 @@ export default async function productsRoutes(fastify) {
       const data = await request.file();
       if (!data) throw reply.badRequest('Зображення не завантажено');
 
-      // Перевіряємо тип файлу — тільки JPEG і PNG
+      // Перевіряємо тип файлу - тільки JPEG і PNG
       if (!['image/jpeg', 'image/png'].includes(data.mimetype)) {
         throw reply.badRequest('Дозволені тільки JPEG та PNG зображення');
       }
@@ -320,7 +346,7 @@ export default async function productsRoutes(fastify) {
       const uploadDir = path.join(process.cwd(), 'uploads', String(id));
       await fs.mkdir(uploadDir, { recursive: true });
 
-      // Зберігаємо файл через stream — без завантаження в пам'ять
+      // Зберігаємо файл через stream - без завантаження в пам'ять
       const filePath = path.join(uploadDir, `image${ext}`);
       const writable = createWriteStream(filePath);
 
@@ -331,7 +357,7 @@ export default async function productsRoutes(fastify) {
       });
 
       // Зберігаємо відносний шлях в файлі продукту
-      // Відносний а не повний URL — бо домен може змінитись
+      // Відносний а не повний URL - бо домен може змінитись
       const imagePath = `/${id}/image${ext}`;
       const updated = await productsService.update(id, { image: imagePath });
 

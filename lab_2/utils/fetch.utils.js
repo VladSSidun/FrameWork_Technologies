@@ -1,27 +1,20 @@
-// Утиліти для надійних HTTP запитів до зовнішніх сервісів
+// fetch.utils.js - утиліти для запитів до зовнішніх сервісів
 
-// fetchWithTimeout — робить fetch із жорстким обмеженням часу
-// Якщо сервер не відповів за timeoutMs — запит скасовується
+// якщо сервер не відповів за timeoutMs мілісекунд - скасовуємо запит
 export const fetchWithTimeout = async (url, timeoutMs = 5000) => {
-  // AbortController — вбудований механізм скасування async операцій
   const controller = new AbortController();
-
-  // Через timeoutMs мілісекунд викликаємо abort() — це скасує fetch
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const timer = setTimeout(() => controller.abort(), timeoutMs); // AbortController скасовує запит
 
   try {
-    // signal передається у fetch — він "слухає" коли abort() буде викликано
-    const response = await fetch(url, { signal: controller.signal });
-    return response;
+    // signal - це мотузка між таймером і fetch, abort() її обриває
+    return await fetch(url, { signal: controller.signal });
   } finally {
-    // finally виконується завжди — і при успіху, і при помилці
-    // Якщо відповідь прийшла вчасно — скасовуємо таймер щоб не було зайвого abort()
+    // finally спрацює завжди - і при успіху і при помилці
     clearTimeout(timer);
   }
 };
 
-// fetchWithRetry — повторює запит при невдачі (до maxRetries разів)
-// Між спробами затримка збільшується вдвічі: 1с → 2с → 4с (exponential backoff)
+// повторює запит при невдачі, між спробами затримка збільшується вдвічі
 export const fetchWithRetry = async (url, maxRetries = 3, timeoutMs = 5000) => {
   let lastError;
 
@@ -29,7 +22,7 @@ export const fetchWithRetry = async (url, maxRetries = 3, timeoutMs = 5000) => {
     try {
       const response = await fetchWithTimeout(url, timeoutMs);
 
-      // fetch не кидає помилку при 4xx/5xx — перевіряємо вручну
+      // fetch не кидає помилку на 4xx/5xx - перевіряємо вручну
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -38,18 +31,13 @@ export const fetchWithRetry = async (url, maxRetries = 3, timeoutMs = 5000) => {
     } catch (error) {
       lastError = error;
 
-      // Якщо це остання спроба — не чекаємо, одразу кидаємо помилку
       if (attempt === maxRetries - 1) break;
 
-      // Exponential backoff: 1000мс, 2000мс, 4000мс
-      // Math.pow(2, 0) = 1, Math.pow(2, 1) = 2, Math.pow(2, 2) = 4
+      // 1000мс → 2000мс → 4000мс
       const delay = 1000 * Math.pow(2, attempt);
-
-      // Чекаємо перед наступною спробою
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 
-  // Всі спроби вичерпано — кидаємо останню помилку
   throw lastError;
 };

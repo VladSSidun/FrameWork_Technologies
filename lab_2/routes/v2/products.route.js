@@ -1,5 +1,7 @@
-// ── routes/v2/products.route.js ───────────────────────────
-// v2 версія маршруту продуктів — додає підтримку пагінації
+// це окрема v2 версія маршруту GET /products.
+// products.route.js v2 - та ж колекція що і v1 але з пагінацією
+// Замість повертати всі 12 продуктів одразу - ділимо на сторінки.
+
 import * as productsService from '#services/products.service.js';
 import { buildImageUrl } from '#utils/image-url.js';
 
@@ -14,9 +16,7 @@ export default async function productsRoutesV2(fastify) {
         querystring: {
           type: 'object',
           properties: {
-            // page — яка сторінка (починаємо з 1)
             page: { type: 'integer', minimum: 1, default: 1 },
-            // limit — скільки записів на сторінці
             limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
           },
         },
@@ -54,31 +54,22 @@ export default async function productsRoutesV2(fastify) {
       },
     },
     async (request, reply) => {
-      // Читаємо параметри з query string, або використовуємо дефолти
-      const page = request.query.page ?? 1;
+      const page = request.query.page ?? 1; // Якщо там null або undefined
       const limit = request.query.limit ?? 10;
 
-      // Отримуємо всі продукти з файлової системи
       const all = await productsService.findAll();
       const total = all.length;
 
-      // Рахуємо скільки всього сторінок
-      // Math.ceil: 23 продукти / 10 = 2.3 → 3 сторінки
+      // Math.ceil бо остання сторінка може бути неповною
       const totalPages = Math.ceil(total / limit);
 
-      // Вирізаємо потрібний шматок масиву
-      // page=1: slice(0, 10) → перші 10
-      // page=2: slice(10, 20) → наступні 10
+      // page=2, limit=3 → start=3, беремо items[3..5]
       const start = (page - 1) * limit;
-      const data = all.slice(start, start + limit).map((p) => ({
-        ...p,
-        image: buildImageUrl(request, p.image),
-      }));
+      const data = all
+        .slice(start, start + limit)
+        .map((p) => ({ ...p, image: buildImageUrl(request, p.image) }));
 
-      return reply.send({
-        data,
-        meta: { total, page, limit, totalPages },
-      });
+      return reply.send({ data, meta: { total, page, limit, totalPages } });
     }
   );
 }

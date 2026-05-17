@@ -1,8 +1,9 @@
-// github.route.js — аналітика спільних contributors між репозиторіями
+// github.route.js - знаходить репозиторії зі спільними contributors
 
 export default async function githubRoutes(fastify) {
   // токен підвищує ліміт з 60 до 5000 запитів/год
   const getHeaders = () => {
+    //  формує об'єкт заголовків для кожного запиту до GitHub.
     const headers = { Accept: 'application/vnd.github+json' };
     if (fastify.config.GITHUB_TOKEN) {
       headers['Authorization'] = `Bearer ${fastify.config.GITHUB_TOKEN}`;
@@ -10,38 +11,32 @@ export default async function githubRoutes(fastify) {
     return headers;
   };
 
-  // GitHub віддає по 100 за раз — збираємо всі сторінки
+  // GitHub віддає по 100 за раз - збираємо всі сторінки в цикл
   const getContributors = async (repo) => {
     const contributors = [];
     let page = 1;
+
     while (true) {
       const res = await fetch(
         `https://api.github.com/repos/${repo}/contributors?per_page=100&page=${page}`,
         { headers: getHeaders() }
       );
+
       if (res.status === 204) break;
       if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
+
       const data = await res.json();
       if (data.length === 0) break;
+
       contributors.push(...data.map((c) => c.login));
-      if (data.length < 100) break;
+      if (data.length < 100) break; // остання сторінка
       page++;
     }
+
     return contributors;
   };
 
-  // репо організації — там найбільше перетинів з contributors
-  const getOrgRepos = async (org) => {
-    const res = await fetch(
-      `https://api.github.com/orgs/${org}/repos?per_page=100&type=public`,
-      { headers: getHeaders() }
-    );
-    if (!res.ok) return [];
-    const data = await res.json();
-    return data.map((r) => r.full_name);
-  };
-
-  // contributors конкретного репо (перша сторінка — достатньо для порівняння)
+  // contributors конкретного репо - для порівняння з цільовим
   const getRepoContributors = async (repo) => {
     const res = await fetch(
       `https://api.github.com/repos/${repo}/contributors?per_page=100`,
@@ -52,15 +47,10 @@ export default async function githubRoutes(fastify) {
     return data.map((c) => c.login);
   };
 
-  // спільна логіка для v1 і v2 — повертає топ-5
+  // спільна логіка v1 і v2 - різниця тільки в тому як отримуємо кандидатів
   const findSharedRepos = async (repo, getCandidateRepos) => {
-    // крок 1: contributors цільового репо
     const targetContributors = new Set(await getContributors(repo));
-
-    // крок 2: список репо-кандидатів для порівняння
-    const candidateRepos = await getCandidateRepos(repo, targetContributors);
-
-    // крок 3: для кожного кандидата рахуємо перетин contributors
+    const candidateRepos = await getCandidateRepos(repo);
     const results = [];
 
     for (const candidateRepo of candidateRepos) {
@@ -68,7 +58,7 @@ export default async function githubRoutes(fastify) {
 
       const candidateContributors = await getRepoContributors(candidateRepo);
 
-      // перетин: хто є і там і там
+      // filter по Set - O(1) для кожної перевірки
       const shared = candidateContributors.filter((c) =>
         targetContributors.has(c)
       );
@@ -90,7 +80,7 @@ export default async function githubRoutes(fastify) {
     };
   };
 
-  // v1 — REST: кандидати = репо організації власника
+  // v1 - кандидати через REST запит до /orgs/:org/repos
   fastify.get(
     '/api/v1/github/shared-repos',
     {
@@ -130,10 +120,15 @@ export default async function githubRoutes(fastify) {
       const { repo } = request.query;
       fastify.log.info(`[v1] Analyzing: ${repo}`);
 
-      // кандидати через REST — репо тієї ж організації
       const getCandidates = async (targetRepo) => {
         const org = targetRepo.split('/')[0];
-        return getOrgRepos(org);
+        const res = await fetch(
+          `https://api.github.com/orgs/${org}/repos?per_page=100&type=public`,
+          { headers: getHeaders() }
+        );
+        if (!res.ok) return [];
+        const data = await res.json();
+        return data.map((r) => r.full_name);
       };
 
       const { targetContributors, results } = await findSharedRepos(
@@ -149,7 +144,7 @@ export default async function githubRoutes(fastify) {
     }
   );
 
-  // v2 — GraphQL: кандидати через GraphQL — репо організації + пов'язані теми
+  // v2 - кандидати через GraphQL, один запит замість кількох REST
   fastify.get(
     '/api/v2/github/shared-repos',
     {
@@ -189,10 +184,10 @@ export default async function githubRoutes(fastify) {
       const { repo } = request.query;
       fastify.log.info(`[v2] Analyzing: ${repo}`);
 
-      // кандидати через GraphQL — отримуємо репо організації одним запитом
       const getCandidates = async (targetRepo) => {
         const org = targetRepo.split('/')[0];
 
+        // GraphQL - описуємо точно що хочемо отримати, сервер віддає тільки це
         const query = `{
         organization(login: "${org}") {
           repositories(first: 100, privacy: PUBLIC, orderBy: {field: STARGAZERS, direction: DESC}) {

@@ -1,122 +1,99 @@
-// ─── Health ───────────────────────────────────────────
-// GET    http://localhost:3000/health
-// GET    http://localhost:3000/health/details                        (без ключа → 401)
-// GET    http://localhost:3000/health/details  [x-api-key: supersecret123]  (→ 200)
+// ─── Запуск ───────────────────────────────────────────────────────────────────
 
-// ─── Products ─────────────────────────────────────────
-// GET    http://localhost:3000/api/products
-// GET    http://localhost:3000/api/products/1
-// GET    http://localhost:3000/api/products/999                      (→ 404)
-// POST   http://localhost:3000/api/products    { name, price, qty, category }
-// POST   http://localhost:3000/api/products    { price: 50 }         (→ 400 валідація)
-// PATCH  http://localhost:3000/api/products/1  { price: 999.99 }
-// DELETE http://localhost:3000/api/products/3                        (→ 204)
-
-// ─── Orders ───────────────────────────────────────────
-// GET    http://localhost:3000/api/orders
-// GET    http://localhost:3000/api/orders/1
-// GET    http://localhost:3000/api/orders/999                        (→ 404)
-// POST   http://localhost:3000/api/orders      { productId: 1, qty: 2 }
-// PATCH  http://localhost:3000/api/orders/1    { status: "processing" }
-// DELETE http://localhost:3000/api/orders/1                          (→ 204)
+npm start                  // запускаю основний сервер
+npm run external           // запускаю json-server на порті 3001 (окремий термінал)
 
 
+// ─── Версіонування ────────────────────────────────────────────────────────────
+
+// всі маршрути тепер під /api/v1
+curl http://localhost:3000/api/v1/products          // має повернути список продуктів
+curl http://localhost:3000/api/products             // старий маршрут — має бути 404
+curl http://localhost:3000/api/v1/orders            // замовлення теж під v1
 
 
+// ─── Пагінація ────────────────────────────────────────────────────────────────
+
+// v2 — нова версія з пагінацією, в meta видно total/page/limit/totalPages
+curl "http://localhost:3000/api/v2/products"                      // дефолт: page=1 limit=10
+curl "http://localhost:3000/api/v2/products?page=2&limit=3"       // 2 сторінка по 3 записи
 
 
+// ─── Rate Limiting ────────────────────────────────────────────────────────────
 
-=================================================================================================
-=================================================================================================
-=================================================================================================
-=================================================================================================
-=================================================================================================
-=================================================================================================
+// -i показує заголовки відповіді — там X-RateLimit-Limit: 100 і X-RateLimit-Remaining
+curl -i http://localhost:3000/api/v1/products
 
 
+// ─── Swagger ──────────────────────────────────────────────────────────────────
 
-# ─── Health ───────────────────────────────────────────
-curl http://localhost:3000/health
-curl http://localhost:3000/health/details
-curl -H "x-api-key: supersecret123" http://localhost:3000/health/details
-
-# ─── Products ─────────────────────────────────────────
-curl http://localhost:3000/api/products
-curl http://localhost:3000/api/products/1
-curl http://localhost:3000/api/products/999
-curl -X POST http://localhost:3000/api/products -H "Content-Type: application/json" -d "{\"name\":\"Keyboard\",\"price\":79.99,\"qty\":20,\"category\":\"accessories\"}"
-curl -X POST http://localhost:3000/api/products -H "Content-Type: application/json" -d "{\"price\":50}"
-curl -X PATCH http://localhost:3000/api/products/1 -H "Content-Type: application/json" -d "{\"price\":999.99}"
-curl -X DELETE http://localhost:3000/api/products/3
-
-# ─── Orders ───────────────────────────────────────────
-curl http://localhost:3000/api/orders
-curl http://localhost:3000/api/orders/1
-curl http://localhost:3000/api/orders/999
-curl -X POST http://localhost:3000/api/orders -H "Content-Type: application/json" -d "{\"productId\":1,\"qty\":2}"
-curl -X PATCH http://localhost:3000/api/orders/1 -H "Content-Type: application/json" -d "{\"status\":\"processing\"}"
-curl -X DELETE http://localhost:3000/api/orders/1
+// відкрити в браузері — інтерактивна документація всіх маршрутів
+// http://localhost:3000/docs
 
 
+// ─── Базовий CRUD (v1) ────────────────────────────────────────────────────────
+
+curl http://localhost:3000/api/v1/products                        // всі продукти
+curl http://localhost:3000/api/v1/products/2                      // продукт по id
+curl http://localhost:3000/api/v1/products/999                    // неіснуючий → 404
+
+curl -X POST http://localhost:3000/api/v1/products \
+  -H "Content-Type: application/json" \
+  -d "{\"name\":\"Keyboard\",\"price\":79.99,\"qty\":20,\"category\":\"accessories\"}"   // створити продукт → 201
+
+curl -X POST http://localhost:3000/api/v1/products \
+  -H "Content-Type: application/json" \
+  -d "{\"price\":50}"                                             // без name → 400 валідація
+
+curl -X PATCH http://localhost:3000/api/v1/products/2 \
+  -H "Content-Type: application/json" \
+  -d "{\"price\":999.99}"                                         // оновити ціну
+
+curl -X DELETE http://localhost:3000/api/v1/products/4            // видалити → 204
 
 
+curl http://localhost:3000/api/v1/orders                          // всі замовлення
+curl http://localhost:3000/api/v1/orders/1                        // замовлення по id
+
+curl -X POST http://localhost:3000/api/v1/orders \
+  -H "Content-Type: application/json" \
+  -d "{\"productId\":2,\"qty\":2}"                                // створити замовлення → 201
+
+curl -X PATCH http://localhost:3000/api/v1/orders/1 \
+  -H "Content-Type: application/json" \
+  -d "{\"status\":\"processing\"}"                                // змінити статус
+
+curl -X DELETE http://localhost:3000/api/v1/orders/1              // видалити → 204
 
 
+// ─── /details — fetch + кеш + graceful degradation ───────────────────────────
+
+// json-server має бути запущений (npm run external в другому терміналі)
+curl http://localhost:3000/api/v1/products/2/details              // повертає продукт + categoryDetails від json-server
+
+// одразу ще раз — цього разу дані беруться з кешу, json-server не чіпається
+curl http://localhost:3000/api/v1/products/2/details              // в логах сервера буде "served from cache"
+
+// зупиняю json-server (Ctrl+C в терміналі 2) і видаляю кеш
+rm data/cache/reference.json
+
+// тепер без json-server — робить 3 спроби з затримкою 1с/2с/4с і повертає categoryDetails: null
+curl http://localhost:3000/api/v1/products/2/details              // чекає ~7с → graceful degradation
 
 
+// ─── GitHub API ───────────────────────────────────────────────────────────────
 
-=====================================================================================================
-=====================================================================================================
-=====================================================================================================
+// v1 через REST API
+curl "http://localhost:3000/api/v1/github/shared-repos?repo=fastify/fastify"       // 436 contributors (>300)
+curl "http://localhost:3000/api/v1/github/shared-repos?repo=expressjs/express"     // 324 contributors (>100)
+curl "http://localhost:3000/api/v1/github/shared-repos?repo=microsoft/vscode"      // 325 contributors (>20)
 
-
-npm start
-запуск сервера (graceful shutdown працює)
-
-npm run dev
-запуск з авторестартом при змінах
-
-npm run seed
-створити початкові файли в data/items/
-
-npm run migrate
-оновити всі файли при зміні моделі
-
-npm run check
-ESLint + Prettier перевірка
+// v2 через GraphQL — результат той самий що v1 але кандидатів отримуємо одним GraphQL запитом
+curl "http://localhost:3000/api/v2/github/shared-repos?repo=fastify/fastify"       // порівняти з v1 вище
 
 
-==========================
+// ─── Health ───────────────────────────────────────────────────────────────────
 
-
-
-Базові CRUD
-
-curl http://localhost:3000/api/products
-curl http://localhost:3000/api/products/1
-curl -X POST http://localhost:3000/api/products -H "Content-Type: application/json" -d "{\"name\":\"Test\",\"price\":99,\"qty\":5,\"category\":\"test\"}"
-curl -X PATCH http://localhost:3000/api/products/1 -H "Content-Type: application/json" -d "{\"price\":999}"
-curl -X DELETE http://localhost:3000/api/products/3
-
-==========================
-
-
-Файловий функціонал
-
-curl http://localhost:3000/api/products/export    експорт наявного csv
-curl -X POST http://localhost:3000/api/products/import -F "file=@test-import.csv"  Імпортуємо csv файл 
-curl -X POST http://localhost:3000/api/products/1/image -F "file=@test.jpg"     Додати файл для елемента інвентароя
-curl http://localhost:3000/uploads/1/image.jpg --output downloaded.jpg
-
-
-
-
-
-
-
-
-
-
-
-
-
+curl http://localhost:3000/health                                          // публічний → 200
+curl http://localhost:3000/health/details                                  // без ключа → 401
+curl -H "x-api-key: supersecret123" http://localhost:3000/health/details   // з ключем → 200

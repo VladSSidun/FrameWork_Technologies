@@ -1,6 +1,6 @@
-// app.js — фабрична функція buildApp().
+// app.js - фабрична функція buildApp().
 // Відповідає за створення та конфігурацію екземпляру Fastify.
-// НЕ запускає сервер — це робить server.js.
+// НЕ запускає сервер - це робить server.js.
 // Такий розподіл дозволяє тестувати застосунок без реального HTTP сервера.
 
 // ── app.js ─────────────────────────────────────────────────
@@ -17,13 +17,17 @@ import cors from '@fastify/cors';
 import fastifyEnv from '@fastify/env';
 import helmet from '@fastify/helmet';
 import fastifyMultipart from '@fastify/multipart';
-import rateLimit from '@fastify/rate-limit';
+import rateLimit from '@fastify/rate-limit'; // rateLimit
 import sensible from '@fastify/sensible';
 import fastifyStatic from '@fastify/static';
-import swagger from '@fastify/swagger';
+import swagger from '@fastify/swagger'; // swagger
 import swaggerUi from '@fastify/swagger-ui';
 import Fastify from 'fastify';
 import path from 'path';
+
+import streamRoutes from '#routes/stream.route.js';
+import wsRoutes from '#routes/ws.route.js';
+import fastifyWebsocket from '@fastify/websocket';
 
 export const buildApp = async () => {
   // eslint-disable-next-line no-process-env
@@ -48,7 +52,7 @@ export const buildApp = async () => {
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
   });
 
-  // 3. Rate limiting — до маршрутів, щоб застосувалось глобально
+  // 3. Rate limiting
   await fastify.register(rateLimit, {
     max: 100, // максимум 100 запитів...
     timeWindow: '1 minute', // ...за 1 хвилину з однієї IP
@@ -92,12 +96,16 @@ export const buildApp = async () => {
 
   fastify.setErrorHandler(errorHandler);
 
-  // 6. Маршрути — v1 і v2 під окремими префіксами
+  // 6. Маршрути - v1 і v2 під окремими префіксами
   await fastify.register(healthRoutes);
   await fastify.register(productsRoutes, { prefix: '/api/v1' });
   await fastify.register(ordersRoutes, { prefix: '/api/v1' });
   await fastify.register(productsRoutesV2, { prefix: '/api/v2' });
   await fastify.register(githubRoutes); // реєструє і v1 і v2 всередині
+
+  await fastify.register(fastifyWebsocket);
+  await fastify.register(streamRoutes, { prefix: '/api/v1' });
+  await fastify.register(wsRoutes);
 
   await createBackup(fastify.log);
 

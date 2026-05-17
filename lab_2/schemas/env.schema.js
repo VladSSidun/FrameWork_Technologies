@@ -12,7 +12,8 @@ export const envSchema = {
       enum: ['development', 'production', 'test'],
     },
     ADMIN_API_KEY: { type: 'string', minLength: 8 },
-    // Токен необов'язковий — без нього ліміт 60 req/год
     GITHUB_TOKEN: { type: 'string', default: '' },
+    // курс долара до гривні для трансформації цін при експорті
+    USD_TO_UAH: { type: 'number', default: 41.5 },
   },
 };

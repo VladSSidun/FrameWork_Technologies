@@ -1,8 +1,10 @@
-// Утиліта для створення бекапів при кожному запуску сервера.
-// Зберігає не більше 5 останніх бекапів — старіші видаляє автоматично.
-
+// backup.utils.js — створює стиснений .gz бекап через pipeline
+import { createWriteStream } from 'fs';
 import fs from 'fs/promises';
 import path from 'path';
+import { Readable } from 'stream';
+import { pipeline } from 'stream/promises';
+import { createGzip } from 'zlib';
 
 const DATA_DIR = path.join(process.cwd(), 'data', 'items');
 const BACKUPS_DIR = path.join(process.cwd(), 'data', 'backups');
@@ -10,12 +12,10 @@ const MAX_BACKUPS = 5;
 
 export const createBackup = async (log) => {
   try {
-    // Читаємо всі файли з data/items/
     let files;
     try {
       files = await fs.readdir(DATA_DIR);
     } catch {
-      // data/items/ порожня або не існує — бекап не потрібен
       log.info('No data to backup');
       return;
     }
@@ -26,39 +26,42 @@ export const createBackup = async (log) => {
       return;
     }
 
-    // Створюємо папку бекапу з поточним timestamp
-    // Наприклад: data/backups/2026-03-31T19-12-33/
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupDir = path.join(BACKUPS_DIR, timestamp);
-    await fs.mkdir(backupDir, { recursive: true });
+    await fs.mkdir(BACKUPS_DIR, { recursive: true });
 
-    // Копіюємо всі файли в папку бекапу
-    await Promise.all(
-      jsonFiles.map((file) =>
-        fs.copyFile(path.join(DATA_DIR, file), path.join(backupDir, file))
-      )
+    // читаємо всі файли і об'єднуємо в один рядок JSON
+    const allItems = await Promise.all(
+      jsonFiles.map(async (file) => {
+        const content = await fs.readFile(path.join(DATA_DIR, file), 'utf8');
+        return JSON.parse(content);
+      })
     );
 
-    log.info(`Backup created: data/backups/${timestamp}`);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupPath = path.join(BACKUPS_DIR, `${timestamp}.gz`);
 
-    // Залишаємо тільки 5 останніх бекапів
-    // Читаємо всі папки бекапів і сортуємо за назвою (timestamp)
+    // pipeline: рядок → Readable stream → gzip стиснення → файл
+    await pipeline(
+      Readable.from(JSON.stringify(allItems)),
+      createGzip(),
+      createWriteStream(backupPath)
+    );
+
+    log.info(`Backup created: data/backups/${timestamp}.gz`);
+
+    // видаляємо старі бекапи якщо більше 5
     const allBackups = await fs.readdir(BACKUPS_DIR);
-    const sorted = allBackups.sort(); // ISO рядки сортуються хронологічно
+    const gzBackups = allBackups.filter((f) => f.endsWith('.gz')).sort();
 
-    if (sorted.length > MAX_BACKUPS) {
-      // Видаляємо найстаріші — все що виходить за ліміт
-      const toDelete = sorted.slice(0, sorted.length - MAX_BACKUPS);
-
+    if (gzBackups.length > MAX_BACKUPS) {
+      const toDelete = gzBackups.slice(0, gzBackups.length - MAX_BACKUPS);
       await Promise.all(
-        toDelete.map((dir) => {
-          log.info(`Removing old backup: ${dir}`);
-          return fs.rm(path.join(BACKUPS_DIR, dir), { recursive: true });
+        toDelete.map((file) => {
+          log.info(`Removing old backup: ${file}`);
+          return fs.unlink(path.join(BACKUPS_DIR, file));
         })
       );
     }
   } catch (error) {
-    // Бекап не критичний — логуємо помилку але не зупиняємо сервер
     log.error(error, 'Backup failed');
   }
 };

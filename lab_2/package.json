@@ -27,7 +27,9 @@
     "#utils/*": "./utils/*",
     "#models/*": "./src/models/*",
     "#scripts/*": "./src/scripts/*",
-    "#migrations/*": "./src/migrations/*"
+    "#migrations/*": "./src/migrations/*",
+    "#events/*": "./src/events/*",
+    "#transforms/*": "./src/transforms/*"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.0",
