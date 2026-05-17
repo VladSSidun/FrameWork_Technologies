@@ -170,7 +170,6 @@ export default async function productsRoutes(fastify) {
       const cacheKey = REDIS_KEYS.categoryDetails();
 
       try {
-        // перевіряємо Redis кеш
         const cached = await request.server.cacheUtils.getFromCache(cacheKey);
 
         if (cached) {
@@ -227,6 +226,7 @@ export default async function productsRoutes(fastify) {
     getById
   );
 
+  // POST/PATCH/DELETE захищені — тільки для авторизованих
   fastify.post(
     '/products',
     {
@@ -234,6 +234,7 @@ export default async function productsRoutes(fastify) {
         body: createProductBody,
         response: { 201: { $ref: 'Product#' } },
       },
+      onRequest: [fastify.authenticate],
     },
     create
   );
@@ -246,6 +247,7 @@ export default async function productsRoutes(fastify) {
         body: updateProductBody,
         response: { 200: { $ref: 'Product#' } },
       },
+      onRequest: [fastify.authenticate],
     },
     update
   );
@@ -254,6 +256,7 @@ export default async function productsRoutes(fastify) {
     '/products/:id',
     {
       schema: { params: idParam },
+      onRequest: [fastify.authenticate],
     },
     remove
   );
@@ -262,6 +265,7 @@ export default async function productsRoutes(fastify) {
     '/products/:id/image',
     {
       schema: { params: idParam },
+      onRequest: [fastify.authenticate],
     },
     async (request, reply) => {
       const { id } = request.params;

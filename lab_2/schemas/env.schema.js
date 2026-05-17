@@ -21,5 +21,11 @@ export const envSchema = {
     MYSQL_DB: { type: 'string', default: 'inventory' },
     REDIS_HOST: { type: 'string', default: 'localhost' },
     REDIS_PORT: { type: 'integer', default: 6379 },
+    // мінімум 32 символи — вимога @fastify/session
+    SESSION_SECRET: {
+      type: 'string',
+      minLength: 32,
+      default: 'supersecret_session_key_min32chars',
+    },
   },
 };
