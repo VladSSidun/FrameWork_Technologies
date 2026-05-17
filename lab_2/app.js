@@ -4,6 +4,8 @@ import mysqlPlugin from '#db/mysql.js';
 import redisPlugin from '#db/redis.js';
 import { isMigrationNeeded } from '#migrations/migrate.js';
 import { createProductsRepository } from '#repositories/products.repository.js';
+import { createUsersRepository } from '#repositories/users.repository.js';
+import authRoutes from '#routes/auth.route.js';
 import githubRoutes from '#routes/github.route.js';
 import healthRoutes from '#routes/health.route.js';
 import ordersRoutes from '#routes/orders.route.js';
@@ -12,13 +14,16 @@ import streamRoutes from '#routes/stream.route.js';
 import productsRoutesV2 from '#routes/v2/products.route.js';
 import wsRoutes from '#routes/ws.route.js';
 import { envSchema } from '#schemas/env.schema.js';
+import { createAuthService } from '#services/auth.service.js';
 import { createProductsService } from '#services/products.service.js';
 import { createBackup } from '#utils/backup.utils.js';
 import { createCacheUtils } from '#utils/cache.utils.js';
 import { errorHandler } from '#utils/error-handler.js';
+import fastifyCookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import fastifyEnv from '@fastify/env';
 import helmet from '@fastify/helmet';
+import fastifyJwt from '@fastify/jwt';
 import fastifyMultipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
 import sensible from '@fastify/sensible';
@@ -44,17 +49,18 @@ export const buildApp = async () => {
 
   await fastify.register(fastifyEnv, { schema: envSchema, dotenv: true });
 
-  // Redis реєструємо ДО rate-limit — rate-limit потребує redis клієнт
   await fastify.register(redisPlugin);
   await fastify.register(mysqlPlugin);
   await fastify.register(drizzlePlugin);
 
-  // DI — передаємо залежності в сервіси
   const productsRepo = createProductsRepository(fastify.drizzle);
   const productsService = createProductsService(productsRepo, fastify.redis);
   fastify.decorate('productsService', productsService);
 
-  // кеш утиліти через Redis
+  const usersRepo = createUsersRepository(fastify.drizzle);
+  const authService = createAuthService(usersRepo);
+  fastify.decorate('authService', authService);
+
   const cacheUtils = createCacheUtils(fastify.redis);
   fastify.decorate('cacheUtils', cacheUtils);
 
@@ -62,13 +68,29 @@ export const buildApp = async () => {
   await fastify.register(cors, {
     origin: isDev ? '*' : 'https://example.com',
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+    credentials: true,
   });
 
-  // rate-limit тепер використовує Redis store
   await fastify.register(rateLimit, {
     max: 100,
     timeWindow: '1 minute',
     redis: fastify.redis,
+  });
+
+  await fastify.register(fastifyCookie);
+
+  // JWT з blacklist перевіркою через trusted callback
+  await fastify.register(fastifyJwt, {
+    secret: fastify.config.JWT_SECRET,
+    trusted: async (request, decodedToken) => {
+      // якщо немає jti — пропускаємо перевірку blacklist
+      if (!decodedToken.jti) return true;
+      const isBlacklisted = await fastify.redis.get(
+        `blacklist:${decodedToken.jti}`
+      );
+      // повертаємо false якщо токен в blacklist
+      return !isBlacklisted;
+    },
   });
 
   await fastify.register(swagger, {
@@ -78,11 +100,22 @@ export const buildApp = async () => {
         description: "REST API для управління складом комп'ютерної техніки",
         version: '1.0.0',
       },
+      // описуємо схему Bearer автентифікації для Swagger UI
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+          },
+        },
+      },
       tags: [
         { name: 'products', description: 'Управління продуктами' },
         { name: 'orders', description: 'Управління замовленнями' },
         { name: 'github', description: 'Аналітика GitHub репозиторіїв' },
         { name: 'health', description: 'Стан сервера' },
+        { name: 'auth', description: 'Автентифікація' },
       ],
     },
   });
@@ -104,6 +137,7 @@ export const buildApp = async () => {
   fastify.setErrorHandler(errorHandler);
 
   await fastify.register(healthRoutes);
+  await fastify.register(authRoutes);
   await fastify.register(productsRoutes, { prefix: '/api/v1' });
   await fastify.register(ordersRoutes, { prefix: '/api/v1' });
   await fastify.register(productsRoutesV2, { prefix: '/api/v2' });

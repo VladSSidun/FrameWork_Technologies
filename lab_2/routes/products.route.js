@@ -8,6 +8,7 @@ import {
   remove,
   update,
 } from '#controllers/products.controller.js';
+import { verifyJwt } from '#routes/auth.route.js';
 import {
   createProductBody,
   idParam,
@@ -170,7 +171,6 @@ export default async function productsRoutes(fastify) {
       const cacheKey = REDIS_KEYS.categoryDetails();
 
       try {
-        // перевіряємо Redis кеш
         const cached = await request.server.cacheUtils.getFromCache(cacheKey);
 
         if (cached) {
@@ -227,13 +227,16 @@ export default async function productsRoutes(fastify) {
     getById
   );
 
+  // POST/PATCH/DELETE захищені JWT
   fastify.post(
     '/products',
     {
       schema: {
         body: createProductBody,
         response: { 201: { $ref: 'Product#' } },
+        security: [{ bearerAuth: [] }],
       },
+      onRequest: [verifyJwt],
     },
     create
   );
@@ -245,7 +248,9 @@ export default async function productsRoutes(fastify) {
         params: idParam,
         body: updateProductBody,
         response: { 200: { $ref: 'Product#' } },
+        security: [{ bearerAuth: [] }],
       },
+      onRequest: [verifyJwt],
     },
     update
   );
@@ -253,7 +258,11 @@ export default async function productsRoutes(fastify) {
   fastify.delete(
     '/products/:id',
     {
-      schema: { params: idParam },
+      schema: {
+        params: idParam,
+        security: [{ bearerAuth: [] }],
+      },
+      onRequest: [verifyJwt],
     },
     remove
   );
@@ -261,7 +270,11 @@ export default async function productsRoutes(fastify) {
   fastify.post(
     '/products/:id/image',
     {
-      schema: { params: idParam },
+      schema: {
+        params: idParam,
+        security: [{ bearerAuth: [] }],
+      },
+      onRequest: [verifyJwt],
     },
     async (request, reply) => {
       const { id } = request.params;

@@ -21,5 +21,9 @@ export const envSchema = {
     MYSQL_DB: { type: 'string', default: 'inventory' },
     REDIS_HOST: { type: 'string', default: 'localhost' },
     REDIS_PORT: { type: 'integer', default: 6379 },
+    JWT_SECRET: {
+      type: 'string',
+      default: 'supersecret_jwt_key_minimum_32_chars',
+    },
   },
 };
