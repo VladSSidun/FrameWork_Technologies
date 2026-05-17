@@ -1,48 +1,55 @@
-// Seed скрипт — переносить початкові дані у файли.
-// Запускається один раз: npm run seed
-// Після цього масив більше не потрібен в основному коді.
+// seed.js — початкові дані для MySQL
+import mysql from 'mysql2/promise';
 
-import { ItemModel } from '#models/item.model.js';
-import { writeAtomic } from '#utils/fs.utils.js';
-import path from 'path';
-
-// Початкові дані — перенесені сюди з products.repository.js
 const initialProducts = [
-  {
-    id: 1,
-    name: 'Laptop Pro',
-    price: 1299.99,
-    qty: 10,
-    category: 'electronics',
-  },
-  {
-    id: 2,
-    name: 'Wireless Mouse',
-    price: 29.99,
-    qty: 50,
-    category: 'accessories',
-  },
-  { id: 3, name: 'USB-C Hub', price: 49.99, qty: 30, category: 'accessories' },
+  { name: 'Laptop Pro', price: 1299.99, qty: 10, category: 'electronics' },
+  { name: 'Wireless Mouse', price: 29.99, qty: 50, category: 'accessories' },
+  { name: 'USB-C Hub', price: 49.99, qty: 30, category: 'accessories' },
 ];
 
-const DATA_DIR = path.join(process.cwd(), 'data', 'items');
+const seed = async (force = false) => {
+  // eslint-disable-next-line no-process-env
+  const connection = await mysql.createConnection({
+    // eslint-disable-next-line no-process-env
+    host: process.env.MYSQL_HOST,
+    // eslint-disable-next-line no-process-env
+    port: parseInt(process.env.MYSQL_PORT),
+    // eslint-disable-next-line no-process-env
+    user: process.env.MYSQL_USER,
+    // eslint-disable-next-line no-process-env
+    password: process.env.MYSQL_PASSWORD,
+    // eslint-disable-next-line no-process-env
+    database: process.env.MYSQL_DB,
+  });
 
-const seed = async () => {
-  console.log('Seeding initial data...');
+  const [rows] = await connection.execute(
+    'SELECT COUNT(*) as count FROM products'
+  );
+  const count = rows[0].count;
 
-  for (const item of initialProducts) {
-    // Використовуємо ItemModel як шаблон — гарантує всі поля присутні
-    const product = { ...ItemModel, ...item };
-    const filePath = path.join(DATA_DIR, `${item.id}.json`);
-
-    await writeAtomic(filePath, product);
-    console.log(`Created: data/items/${item.id}.json`);
+  if (count > 0 && !force) {
+    console.log(`DB already has ${count} products. Use seed:force to reset.`);
+    await connection.end();
+    return;
   }
 
-  console.log('Seed completed!');
+  if (force) {
+    await connection.execute('DELETE FROM products');
+    console.log('Cleared existing products');
+  }
+
+  for (const product of initialProducts) {
+    await connection.execute(
+      'INSERT INTO products (name, price, qty, category) VALUES (?, ?, ?, ?)',
+      [product.name, product.price, product.qty, product.category]
+    );
+  }
+
+  console.log(`Seeded ${initialProducts.length} products`);
+  await connection.end();
 };
 
-seed().catch((err) => {
+seed(process.argv[2] === 'force').catch((err) => {
   console.error('Seed failed:', err);
   process.exit(1);
 });

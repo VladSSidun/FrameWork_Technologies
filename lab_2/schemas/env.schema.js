@@ -13,7 +13,11 @@ export const envSchema = {
     },
     ADMIN_API_KEY: { type: 'string', minLength: 8 },
     GITHUB_TOKEN: { type: 'string', default: '' },
-    // курс долара до гривні для трансформації цін при експорті
     USD_TO_UAH: { type: 'number', default: 41.5 },
+    MYSQL_HOST: { type: 'string', default: 'localhost' },
+    MYSQL_PORT: { type: 'integer', default: 3306 },
+    MYSQL_USER: { type: 'string', default: 'root' },
+    MYSQL_PASSWORD: { type: 'string', default: '' },
+    MYSQL_DB: { type: 'string', default: 'inventory' },
   },
 };

@@ -1,7 +1,6 @@
 // products.controller.js
 import { MESSAGES } from '#constants/messages.js';
 import { eventBus } from '#events/event-bus.js';
-import * as productsService from '#services/products.service.js';
 import { buildImageUrl } from '#utils/image-url.js';
 
 const withImageUrl = (request, product) => {
@@ -10,35 +9,40 @@ const withImageUrl = (request, product) => {
 };
 
 export const getAll = async (request, reply) => {
-  const products = await productsService.findAll();
+  // request.server — доступ до fastify інстансу з контролера
+  const products = await request.server.productsService.findAll();
   return reply.send(products.map((p) => withImageUrl(request, p)));
 };
 
 export const getById = async (request, reply) => {
-  const product = await productsService.findById(request.params.id);
+  const product = await request.server.productsService.findById(
+    request.params.id
+  );
   if (!product) throw reply.notFound(MESSAGES.PRODUCT_NOT_FOUND);
   return reply.send(withImageUrl(request, product));
 };
 
 export const create = async (request, reply) => {
-  const product = await productsService.create(request.body);
-  // сповіщаємо всіх WebSocket клієнтів про новий продукт
+  const product = await request.server.productsService.create(request.body);
   eventBus.emit('product:created', product);
   return reply.status(201).send(withImageUrl(request, product));
 };
 
 export const update = async (request, reply) => {
-  const product = await productsService.update(request.params.id, request.body);
+  const product = await request.server.productsService.update(
+    request.params.id,
+    request.body
+  );
   if (!product) throw reply.notFound(MESSAGES.PRODUCT_NOT_FOUND);
-  // сповіщаємо про оновлення
   eventBus.emit('product:updated', product);
   return reply.send(withImageUrl(request, product));
 };
 
 export const remove = async (request, reply) => {
-  const success = await productsService.remove(request.params.id);
+  const success = await request.server.productsService.remove(
+    request.params.id
+  );
   if (!success) throw reply.notFound(MESSAGES.PRODUCT_NOT_FOUND);
-  // сповіщаємо про видалення — передаємо тільки id
   eventBus.emit('product:deleted', request.params.id);
   return reply.status(204).send();
 };

@@ -29,7 +29,8 @@
     "#scripts/*": "./src/scripts/*",
     "#migrations/*": "./src/migrations/*",
     "#events/*": "./src/events/*",
-    "#transforms/*": "./src/transforms/*"
+    "#transforms/*": "./src/transforms/*",
+    "#db/*": "./db/*"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.0",
@@ -44,7 +45,8 @@
     "csv-parse": "^6.2.1",
     "csv-stringify": "^6.7.0",
     "fastify": "^5.0.0",
-    "fastify-plugin": "^5.0.0"
+    "fastify-plugin": "^5.0.0",
+    "mysql2": "^3.22.3"
   },
   "devDependencies": {
     "eslint": "^9.0.0",

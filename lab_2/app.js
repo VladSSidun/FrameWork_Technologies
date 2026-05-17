@@ -29,6 +29,10 @@ import streamRoutes from '#routes/stream.route.js';
 import wsRoutes from '#routes/ws.route.js';
 import fastifyWebsocket from '@fastify/websocket';
 
+import mysqlPlugin from '#db/mysql.js';
+import { createProductsRepository } from '#repositories/products.repository.js';
+import { createProductsService } from '#services/products.service.js';
+
 export const buildApp = async () => {
   // eslint-disable-next-line no-process-env
   const isDev = process.env.NODE_ENV !== 'production';
@@ -44,6 +48,12 @@ export const buildApp = async () => {
 
   // 1. Конфігурація середовища
   await fastify.register(fastifyEnv, { schema: envSchema, dotenv: true });
+
+  await fastify.register(mysqlPlugin);
+
+  const productsRepo = createProductsRepository(fastify.mysql);
+  const productsService = createProductsService(productsRepo);
+  fastify.decorate('productsService', productsService);
 
   // 2. Безпека
   await fastify.register(helmet, { global: true });
