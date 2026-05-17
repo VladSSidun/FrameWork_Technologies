@@ -1,16 +1,13 @@
-// JSON Schema для продуктів
-// Додані поля: category, image
-
 export const productSchema = {
   $id: 'Product',
   type: 'object',
   properties: {
-    id: { type: 'integer' },
+    id: { type: 'string' }, // MongoDB ObjectId — рядок, не integer
     name: { type: 'string' },
     price: { type: 'number' },
     qty: { type: 'integer' },
     category: { type: 'string' },
-    image: {}, //{ nullable: true, type: 'string' }, // приймає будь-яке значення — рядок або null
+    image: {},
     discount: { type: 'integer' },
   },
 };
@@ -40,9 +37,10 @@ export const updateProductBody = {
   additionalProperties: false,
 };
 
+// id тепер string — MongoDB ObjectId
 export const idParam = {
   type: 'object',
   properties: {
-    id: { type: 'integer' },
+    id: { type: 'string' },
   },
 };

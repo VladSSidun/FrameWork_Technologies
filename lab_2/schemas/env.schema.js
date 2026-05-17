@@ -13,7 +13,8 @@ export const envSchema = {
     },
     ADMIN_API_KEY: { type: 'string', minLength: 8 },
     GITHUB_TOKEN: { type: 'string', default: '' },
-    // курс долара до гривні для трансформації цін при експорті
     USD_TO_UAH: { type: 'number', default: 41.5 },
+    MONGO_URL: { type: 'string', default: 'mongodb://127.0.0.1:27017' },
+    MONGO_DB_NAME: { type: 'string', default: 'inventory' },
   },
 };

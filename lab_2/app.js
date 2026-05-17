@@ -29,6 +29,11 @@ import streamRoutes from '#routes/stream.route.js';
 import wsRoutes from '#routes/ws.route.js';
 import fastifyWebsocket from '@fastify/websocket';
 
+import '#db/models/product.model.js';
+import mongoPlugin from '#db/mongo.js';
+import { createProductsRepository } from '#repositories/products.repository.js';
+import { createProductsService } from '#services/products.service.js';
+
 export const buildApp = async () => {
   // eslint-disable-next-line no-process-env
   const isDev = process.env.NODE_ENV !== 'production';
@@ -44,6 +49,14 @@ export const buildApp = async () => {
 
   // 1. Конфігурація середовища
   await fastify.register(fastifyEnv, { schema: envSchema, dotenv: true });
+
+  // підключаємо MongoDB
+  await fastify.register(mongoPlugin);
+
+  // DI — передаємо mongoose в репозиторій і сервіс
+  const productsRepo = createProductsRepository();
+  const productsService = createProductsService(productsRepo);
+  fastify.decorate('productsService', productsService);
 
   // 2. Безпека
   await fastify.register(helmet, { global: true });
