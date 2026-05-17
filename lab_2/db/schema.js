@@ -1,4 +1,3 @@
-// schema.js — опис таблиці через Drizzle API
 import { decimal, int, mysqlTable, varchar } from 'drizzle-orm/mysql-core';
 
 export const products = mysqlTable('products', {
@@ -9,4 +8,11 @@ export const products = mysqlTable('products', {
   category: varchar('category', { length: 255 }),
   image: varchar('image', { length: 255 }),
   discount: int('discount').default(0),
+});
+
+// нова таблиця для автентифікації
+export const users = mysqlTable('users', {
+  id: int('id').autoincrement().primaryKey(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  password: varchar('password', { length: 255 }).notNull(),
 });

@@ -1,36 +1,16 @@
-// cache.utils.js - файловий кеш з TTL для відповідей зовнішнього сервісу
+// cache.utils.js — кеш через Redis замість файлової системи
+// TTL 120 секунд для даних категорій від json-server
 
-import fs from 'fs/promises';
-import path from 'path';
+export const createCacheUtils = (redis) => ({
+  // повертає дані з кешу або null якщо немає/застарів
+  getFromCache: async (key) => {
+    const cached = await redis.get(key);
+    if (cached === null) return null;
+    return JSON.parse(cached);
+  },
 
-const CACHE_FILE = path.join(process.cwd(), 'data', 'cache', 'reference.json');
-const CACHE_TTL_SECONDS = 120; // кеш живе 2 хвилини
-
-// повертає дані з кешу якщо вони ще свіжі, інакше null
-export const getFromCache = async () => {
-  try {
-    const content = await fs.readFile(CACHE_FILE, 'utf8');
-    const cache = JSON.parse(content);
-
-    // рахуємо скільки секунд пройшло з моменту збереження
-    const ageSeconds = (Date.now() - cache.savedAt) / 1000;
-
-    if (ageSeconds < CACHE_TTL_SECONDS) return cache.data;
-
-    return null; // кеш є але вже протух
-  } catch {
-    return null; // файлу немає або пошкоджений
-  }
-};
-
-// зберігає дані у файл разом з поточним часом
-export const saveToCache = async (data) => {
-  const dir = path.dirname(CACHE_FILE);
-  await fs.mkdir(dir, { recursive: true });
-
-  await fs.writeFile(
-    CACHE_FILE,
-    JSON.stringify({ savedAt: Date.now(), data }, null, 2),
-    'utf8'
-  );
-};
+  // зберігає дані в Redis з TTL в секундах
+  saveToCache: async (key, data, ttlSeconds = 120) => {
+    await redis.set(key, JSON.stringify(data), 'EX', ttlSeconds);
+  },
+});

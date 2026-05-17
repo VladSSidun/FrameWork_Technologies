@@ -1,6 +1,7 @@
 // ── app.js ─────────────────────────────────────────────────
 import drizzlePlugin from '#db/drizzle.js';
 import mysqlPlugin from '#db/mysql.js';
+import redisPlugin from '#db/redis.js';
 import { isMigrationNeeded } from '#migrations/migrate.js';
 import { createProductsRepository } from '#repositories/products.repository.js';
 import githubRoutes from '#routes/github.route.js';
@@ -13,6 +14,7 @@ import wsRoutes from '#routes/ws.route.js';
 import { envSchema } from '#schemas/env.schema.js';
 import { createProductsService } from '#services/products.service.js';
 import { createBackup } from '#utils/backup.utils.js';
+import { createCacheUtils } from '#utils/cache.utils.js';
 import { errorHandler } from '#utils/error-handler.js';
 import cors from '@fastify/cors';
 import fastifyEnv from '@fastify/env';
@@ -42,13 +44,19 @@ export const buildApp = async () => {
 
   await fastify.register(fastifyEnv, { schema: envSchema, dotenv: true });
 
+  // Redis реєструємо ДО rate-limit — rate-limit потребує redis клієнт
+  await fastify.register(redisPlugin);
   await fastify.register(mysqlPlugin);
   await fastify.register(drizzlePlugin);
 
-  // DI — передаємо drizzle в репозиторій і сервіс
+  // DI — передаємо залежності в сервіси
   const productsRepo = createProductsRepository(fastify.drizzle);
-  const productsService = createProductsService(productsRepo);
+  const productsService = createProductsService(productsRepo, fastify.redis);
   fastify.decorate('productsService', productsService);
+
+  // кеш утиліти через Redis
+  const cacheUtils = createCacheUtils(fastify.redis);
+  fastify.decorate('cacheUtils', cacheUtils);
 
   await fastify.register(helmet, { global: true });
   await fastify.register(cors, {
@@ -56,9 +64,11 @@ export const buildApp = async () => {
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
   });
 
+  // rate-limit тепер використовує Redis store
   await fastify.register(rateLimit, {
     max: 100,
     timeWindow: '1 minute',
+    redis: fastify.redis,
   });
 
   await fastify.register(swagger, {

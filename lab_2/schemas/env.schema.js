@@ -19,5 +19,7 @@ export const envSchema = {
     MYSQL_USER: { type: 'string', default: 'root' },
     MYSQL_PASSWORD: { type: 'string', default: '' },
     MYSQL_DB: { type: 'string', default: 'inventory' },
+    REDIS_HOST: { type: 'string', default: 'localhost' },
+    REDIS_PORT: { type: 'integer', default: 6379 },
   },
 };
