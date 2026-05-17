@@ -1,9 +1,6 @@
 // mysql.js — Fastify плагін підключення до MySQL через пул з'єднань
-import crypto from 'crypto';
 import fp from 'fastify-plugin';
-import fs from 'fs/promises';
 import mysql from 'mysql2/promise';
-import path from 'path';
 
 async function mysqlPlugin(fastify) {
   const pool = mysql.createPool({
@@ -29,39 +26,10 @@ async function mysqlPlugin(fastify) {
   // decorate — робить пул доступним як fastify.mysql скрізь
   fastify.decorate('mysql', pool);
 
-  // міграція — порівнюємо хеш схеми з записом в БД
-  try {
-    const schemaPath = path.join(process.cwd(), 'db', 'schema.sql');
-    const schema = await fs.readFile(schemaPath, 'utf8');
-    const currentHash = crypto.createHash('md5').update(schema).digest('hex');
-
-    const [rows] = await pool.execute(
-      'SELECT hash FROM migrations ORDER BY id DESC LIMIT 1'
-    );
-
-    if (rows.length === 0) {
-      await pool.execute('INSERT INTO migrations (hash) VALUES (?)', [
-        currentHash,
-      ]);
-      fastify.log.info('Migration hash saved');
-    } else if (rows[0].hash !== currentHash) {
-      fastify.log.warn(
-        'Schema changed — hash mismatch. Consider updating the DB structure.'
-      );
-      await pool.execute('INSERT INTO migrations (hash) VALUES (?)', [
-        currentHash,
-      ]);
-    } else {
-      fastify.log.info('Schema is up to date');
-    }
-  } catch (err) {
-    fastify.log.warn({ err }, 'Migration check failed');
-  }
-
   fastify.addHook('onClose', async () => {
     await pool.end();
     fastify.log.info('MySQL pool closed');
   });
 }
 
-export default fp(mysqlPlugin);
+export default fp(mysqlPlugin, { name: 'mysql-plugin' });

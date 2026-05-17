@@ -1,37 +1,31 @@
-// app.js - фабрична функція buildApp().
-// Відповідає за створення та конфігурацію екземпляру Fastify.
-// НЕ запускає сервер - це робить server.js.
-// Такий розподіл дозволяє тестувати застосунок без реального HTTP сервера.
-
 // ── app.js ─────────────────────────────────────────────────
+import drizzlePlugin from '#db/drizzle.js';
+import mysqlPlugin from '#db/mysql.js';
 import { isMigrationNeeded } from '#migrations/migrate.js';
+import { createProductsRepository } from '#repositories/products.repository.js';
 import githubRoutes from '#routes/github.route.js';
 import healthRoutes from '#routes/health.route.js';
 import ordersRoutes from '#routes/orders.route.js';
 import productsRoutes from '#routes/products.route.js';
+import streamRoutes from '#routes/stream.route.js';
 import productsRoutesV2 from '#routes/v2/products.route.js';
+import wsRoutes from '#routes/ws.route.js';
 import { envSchema } from '#schemas/env.schema.js';
+import { createProductsService } from '#services/products.service.js';
 import { createBackup } from '#utils/backup.utils.js';
 import { errorHandler } from '#utils/error-handler.js';
 import cors from '@fastify/cors';
 import fastifyEnv from '@fastify/env';
 import helmet from '@fastify/helmet';
 import fastifyMultipart from '@fastify/multipart';
-import rateLimit from '@fastify/rate-limit'; // rateLimit
+import rateLimit from '@fastify/rate-limit';
 import sensible from '@fastify/sensible';
 import fastifyStatic from '@fastify/static';
-import swagger from '@fastify/swagger'; // swagger
+import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import fastifyWebsocket from '@fastify/websocket';
 import Fastify from 'fastify';
 import path from 'path';
-
-import streamRoutes from '#routes/stream.route.js';
-import wsRoutes from '#routes/ws.route.js';
-import fastifyWebsocket from '@fastify/websocket';
-
-import mysqlPlugin from '#db/mysql.js';
-import { createProductsRepository } from '#repositories/products.repository.js';
-import { createProductsService } from '#services/products.service.js';
 
 export const buildApp = async () => {
   // eslint-disable-next-line no-process-env
@@ -46,30 +40,27 @@ export const buildApp = async () => {
     },
   });
 
-  // 1. Конфігурація середовища
   await fastify.register(fastifyEnv, { schema: envSchema, dotenv: true });
 
   await fastify.register(mysqlPlugin);
+  await fastify.register(drizzlePlugin);
 
-  const productsRepo = createProductsRepository(fastify.mysql);
+  // DI — передаємо drizzle в репозиторій і сервіс
+  const productsRepo = createProductsRepository(fastify.drizzle);
   const productsService = createProductsService(productsRepo);
   fastify.decorate('productsService', productsService);
 
-  // 2. Безпека
   await fastify.register(helmet, { global: true });
   await fastify.register(cors, {
     origin: isDev ? '*' : 'https://example.com',
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
   });
 
-  // 3. Rate limiting
   await fastify.register(rateLimit, {
-    max: 100, // максимум 100 запитів...
-    timeWindow: '1 minute', // ...за 1 хвилину з однієї IP
-    // при перевищенні Fastify автоматично повертає 429
+    max: 100,
+    timeWindow: '1 minute',
   });
 
-  // 4. Swagger
   await fastify.register(swagger, {
     openapi: {
       info: {
@@ -77,7 +68,6 @@ export const buildApp = async () => {
         description: "REST API для управління складом комп'ютерної техніки",
         version: '1.0.0',
       },
-      // описуємо обидві версії API
       tags: [
         { name: 'products', description: 'Управління продуктами' },
         { name: 'orders', description: 'Управління замовленнями' },
@@ -88,13 +78,10 @@ export const buildApp = async () => {
   });
 
   await fastify.register(swaggerUi, {
-    routePrefix: '/docs', // документація доступна за GET /docs
-    uiConfig: {
-      docExpansion: 'list', // розгортати секції списком
-    },
+    routePrefix: '/docs',
+    uiConfig: { docExpansion: 'list' },
   });
 
-  // 5. Утиліти
   await fastify.register(sensible);
   await fastify.register(fastifyMultipart, {
     limits: { fileSize: 5 * 1024 * 1024 },
@@ -106,13 +93,11 @@ export const buildApp = async () => {
 
   fastify.setErrorHandler(errorHandler);
 
-  // 6. Маршрути - v1 і v2 під окремими префіксами
   await fastify.register(healthRoutes);
   await fastify.register(productsRoutes, { prefix: '/api/v1' });
   await fastify.register(ordersRoutes, { prefix: '/api/v1' });
   await fastify.register(productsRoutesV2, { prefix: '/api/v2' });
-  await fastify.register(githubRoutes); // реєструє і v1 і v2 всередині
-
+  await fastify.register(githubRoutes);
   await fastify.register(fastifyWebsocket);
   await fastify.register(streamRoutes, { prefix: '/api/v1' });
   await fastify.register(wsRoutes);
