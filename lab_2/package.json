@@ -18,7 +18,10 @@
     "db:generate": "drizzle-kit generate --config=drizzle.config.js",
     "db:migrate": "drizzle-kit migrate --config=drizzle.config.js",
     "seed": "node --env-file=.env src/scripts/seed.js",
-    "seed:force": "node --env-file=.env src/scripts/seed.js force"
+    "seed:force": "node --env-file=.env src/scripts/seed.js force",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "imports": {
     "#schemas/*": "./schemas/*",
@@ -54,10 +57,13 @@
     "mysql2": "^3.22.3"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.6",
+    "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.0.0",
     "json-server": "^1.0.0-beta.15",
     "pino-pretty": "^13.0.0",
-    "prettier": "^3.0.0"
+    "prettier": "^3.0.0",
+    "vitest": "^4.1.6"
   }
 }
