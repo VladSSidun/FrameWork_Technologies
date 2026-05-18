@@ -101,7 +101,11 @@ const migrate = async () => {
   console.log(`Migration completed. Updated ${migrated} files.`);
 };
 
-migrate().catch((err) => {
-  console.error('Migration failed:', err);
-  process.exit(1);
-});
+// Запускаємо міграцію тільки якщо файл запущений напряму
+// а не імпортований як модуль
+if (process.argv[1].includes('migrate')) {
+  migrate().catch((err) => {
+    console.error('Migration failed:', err);
+    process.exit(1);
+  });
+}

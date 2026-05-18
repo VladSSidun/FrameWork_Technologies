@@ -1,0 +1,27 @@
+services:
+  app:
+    build:
+      context: .
+      target: runner
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOST: 0.0.0.0
+      ADMIN_API_KEY: supersecret123
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: secret
+      MYSQL_DB: inventory
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: supersecret_jwt_key_minimum_32_characters_here
+      USD_TO_UAH: 41.5
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
